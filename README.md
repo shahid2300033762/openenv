@@ -2,9 +2,9 @@
 
 Production-grade AI evaluation framework for testing agents on real-world professional workflows. Fully compliant with the [OpenEnv specification](https://github.com/meta-pytorch/OpenEnv).
 
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/yourusername/openenv-workflow-eval)
-[![Tests](https://img.shields.io/badge/tests-52%20passing-brightgreen)](https://github.com/yourusername/openenv-workflow-eval)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://github.com/yourusername/openenv-workflow-eval)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/shahid2300033762/openenv)
+[![Tests](https://img.shields.io/badge/tests-52%20passing-brightgreen)](https://github.com/shahid2300033762/openenv)
+[![Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://github.com/shahid2300033762/openenv)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -251,9 +251,9 @@ If you use this environment in your research, please cite:
 ```bibtex
 @software{openenv_workflow_eval,
   title={OpenEnv Workflow Evaluation Environment},
-  author={Your Name},
+  author={Shahid},
   year={2026},
-  url={https://github.com/yourusername/openenv-workflow-eval}
+  url={https://github.com/shahid2300033762/openenv}
 }
 ```
 

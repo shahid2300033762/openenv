@@ -14,6 +14,7 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel as PydanticBaseModel
 
 from models import Action, Observation, Reward, State, StepResult
@@ -28,6 +29,12 @@ app = FastAPI(
     version="1.0.0",
     description="Production-grade AI evaluation for professional workflows",
 )
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect to documentation."""
+    return RedirectResponse(url="/docs")
+
 
 # In-memory session store
 _sessions: dict = {}
