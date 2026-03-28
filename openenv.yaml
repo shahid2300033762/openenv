@@ -1,0 +1,68 @@
+name: workflow-eval-env
+version: "1.0.0"
+description: >
+  Production-grade AI evaluation environment for professional workflows.
+  Implements Email Triage, Data Cleaning, Code Review, and Incident Response
+  tasks with advanced semantic graders, dense rewards, and strict OpenEnv compliance.
+
+tasks:
+  - name: email_triage
+    difficulty: easy
+    description: Classify, prioritize, and respond to customer support emails
+    ideal_steps: 3
+    max_steps: 5
+
+  - name: data_cleaning
+    difficulty: medium
+    description: Clean messy datasets step-by-step (missing values, duplicates, casing, formats)
+    ideal_steps: 4
+    max_steps: 10
+
+  - name: code_review
+    difficulty: hard
+    description: Review pull requests — detect bugs, suggest fixes, optimize code
+    ideal_steps: 5
+    max_steps: 8
+
+  - name: incident_response
+    difficulty: expert
+    description: Cybersecurity incident response with real security logs - detect, analyze, contain, remediate, document
+    ideal_steps: 5
+    max_steps: 10
+
+observation_space:
+  type: structured
+  format: pydantic
+  model: models.Observation
+  fields:
+    - task_name
+    - step
+    - instructions
+    - context
+    - data
+    - feedback
+    - available_actions
+    - phase
+
+action_space:
+  type: structured
+  format: pydantic
+  model: models.Action
+  fields:
+    - action_type
+    - target
+    - value
+    - reasoning
+
+reward:
+  type: dense
+  range: [0.0, 1.0]
+  components:
+    - correctness
+    - reasoning_quality
+    - progress
+  penalties:
+    - step_penalty
+    - invalid_action_penalty
+    - repetition_penalty
+    - skip_penalty

@@ -1,0 +1,89 @@
+"""
+FastAPI server for the OpenEnv evaluation environment.
+
+Exposes the environment via HTTP/WebSocket for remote access.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import uuid
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel as PydanticBaseModel
+
+from models import Action, Observation, Reward, State, StepResult
+from tasks.email_triage.environment import EmailTriageEnvironment
+from tasks.data_cleaning.environment import DataCleaningEnvironment
+from tasks.code_review.environment import CodeReviewEnvironment
+from tasks.incident_response.environment import IncidentResponseEnvironment
+
+
+app = FastAPI(
+    title="OpenEnv Workflow Evaluation Environment",
+    version="1.0.0",
+    description="Production-grade AI evaluation for professional workflows",
+)
+
+# In-memory session store
+_sessions: dict = {}
+
+
+class CreateSessionRequest(PydanticBaseModel):
+    task_name: str
+    index: int = 0
+
+
+class StepRequest(PydanticBaseModel):
+    session_id: str
+    action: Action
+
+
+def _create_env(task_name: str, index: int = 0):
+    if task_name == "email_triage":
+        return EmailTriageEnvironment(email_index=index)
+    elif task_name == "data_cleaning":
+        return DataCleaningEnvironment()
+    elif task_name == "code_review":
+        return CodeReviewEnvironment(snippet_index=index)
+    elif task_name == "incident_response":
+        return IncidentResponseEnvironment(incident_index=index)
+    raise ValueError(f"Unknown task: {task_name}")
+
+
+@app.post("/reset", response_model=dict)
+async def reset(req: CreateSessionRequest):
+    """Create a new session and reset the environment."""
+    session_id = str(uuid.uuid4())
+    env = _create_env(req.task_name, req.index)
+    obs = env.reset()
+    _sessions[session_id] = env
+    return {"session_id": session_id, "observation": obs.model_dump()}
+
+
+@app.post("/step", response_model=dict)
+async def step(req: StepRequest):
+    """Execute an action in the environment."""
+    env = _sessions.get(req.session_id)
+    if not env:
+        raise HTTPException(404, "Session not found")
+    result = env.step(req.action)
+    return result.model_dump()
+
+
+@app.get("/state/{session_id}", response_model=dict)
+async def state(session_id: str):
+    """Get current session state."""
+    env = _sessions.get(session_id)
+    if not env:
+        raise HTTPException(404, "Session not found")
+    return env.state().model_dump()
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "version": "1.0.0"}
