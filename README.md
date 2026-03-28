@@ -1,3 +1,12 @@
+---
+title: OpenEnv Workflow Eval
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # OpenEnv Workflow Evaluation Environment
 
 Production-grade AI evaluation framework for testing agents on real-world professional workflows. Fully compliant with the [OpenEnv specification](https://github.com/meta-pytorch/OpenEnv).
