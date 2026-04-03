@@ -184,36 +184,66 @@ async def step(req: StepRequest):
     return result.model_dump()
 
 
-# /reset endpoint - raw Starlette endpoint that bypasses FastAPI validation
-async def reset_handler(request: Request):
-    """Create a new session and reset the environment."""
-    task_name = "email_triage"
-    index = 0
+# ASGI wrapper that intercepts /reset BEFORE FastAPI validation
+class ResetInterceptorASGI:
+    def __init__(self, app):
+        self.app = app
     
-    # Try to read body
-    try:
-        if request.method == "POST":
-            body = await request.body()
+    async def __call__(self, scope, receive, send):
+        # Only intercept POST /reset requests
+        if scope["type"] == "http" and scope["path"] == "/reset" and scope["method"] == "POST":
+            # Handle the request directly without going through FastAPI
+            body_parts = []
+            while True:
+                message = await receive()
+                body_parts.append(message.get("body", b""))
+                if not message.get("more_body", False):
+                    break
+            
+            body = b"".join(body_parts)
+            task_name = "email_triage"
+            index = 0
+            
+            # Try to parse JSON body
             if body:
-                data = json.loads(body)
-                if isinstance(data, dict):
-                    task_name = data.get("task_name", task_name)
-                    index = data.get("index", index)
-    except:
-        pass
-    
-    session_id = str(uuid.uuid4())
-    env = _create_env(task_name, index)
-    obs = env.reset()
-    _sessions[session_id] = env
-    
-    return JSONResponse({
-        "session_id": session_id,
-        "observation": obs.model_dump()
-    })
-
-# Add route using Starlette directly - bypasses Pydantic
-_fastapi_app.router.routes.insert(0, Route("/reset", reset_handler, methods=["POST"]))
+                try:
+                    data = json.loads(body)
+                    if isinstance(data, dict):
+                        task_name = data.get("task_name", task_name)
+                        index = data.get("index", index)
+                except:
+                    pass
+            
+            # Create session
+            session_id = str(uuid.uuid4())
+            env = _create_env(task_name, index)
+            obs = env.reset()
+            _sessions[session_id] = env
+            
+            # Send response
+            response_body = json.dumps({
+                "session_id": session_id,
+                "observation": obs.model_dump()
+            }).encode()
+            
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"access-control-allow-origin", b"*"),
+                    (b"access-control-allow-credentials", b"true"),
+                ],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": response_body,
+                "more_body": False,
+            })
+            return
+        
+        # For all other requests, pass through to FastAPI
+        await self.app(scope, receive, send)
 
 
 @_fastapi_app.get("/health")
@@ -221,5 +251,5 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
-# Use FastAPI app directly, no wrapper
-app = _fastapi_app
+# Wrap FastAPI app with ASGI interceptor for /reset endpoint
+app = ResetInterceptorASGI(_fastapi_app)
