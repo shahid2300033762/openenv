@@ -162,8 +162,8 @@ _fastapi_app.add_middleware(
 
 @_fastapi_app.get("/", include_in_schema=False)
 async def root():
-    """Redirect to documentation."""
-    return RedirectResponse(url="/docs")
+    """Root endpoint - API is ready."""
+    return {"status": "ok", "version": "1.0.0"}
 
 
 @_fastapi_app.get("/state/{session_id}", response_model=dict)
@@ -194,6 +194,7 @@ class ResetInterceptorASGI:
         # Only intercept POST /reset requests
         if scope["type"] == "http" and scope["path"] == "/reset" and scope["method"] == "POST":
             # Handle the request directly without going through FastAPI
+            # Read the entire body first
             body_parts = []
             while True:
                 message = await receive()
@@ -205,43 +206,59 @@ class ResetInterceptorASGI:
             task_name = "email_triage"
             index = 0
             
-            # Try to parse JSON body
+            # Try to parse JSON body (be very lenient)
             if body:
                 try:
                     data = json.loads(body)
                     if isinstance(data, dict):
                         task_name = data.get("task_name", task_name)
                         index = data.get("index", index)
-                except:
+                except Exception as e:
+                    # Silently ignore parse errors, use defaults
                     pass
             
             # Create session
-            session_id = str(uuid.uuid4())
-            env = _create_env(task_name, index)
-            obs = env.reset()
-            _sessions[session_id] = env
-            
-            # Send response
-            response_body = json.dumps({
-                "session_id": session_id,
-                "observation": obs.model_dump()
-            }).encode()
-            
-            await send({
-                "type": "http.response.start",
-                "status": 200,
-                "headers": [
-                    (b"content-type", b"application/json"),
-                    (b"access-control-allow-origin", b"*"),
-                    (b"access-control-allow-credentials", b"true"),
-                ],
-            })
-            await send({
-                "type": "http.response.body",
-                "body": response_body,
-                "more_body": False,
-            })
-            return
+            try:
+                session_id = str(uuid.uuid4())
+                env = _create_env(task_name, index)
+                obs = env.reset()
+                _sessions[session_id] = env
+                
+                # Send successful response
+                response_body = json.dumps({
+                    "session_id": session_id,
+                    "observation": obs.model_dump()
+                }).encode('utf-8')
+                
+                await send({
+                    "type": "http.response.start",
+                    "status": 200,
+                    "headers": [
+                        (b"content-type", b"application/json"),
+                        (b"access-control-allow-origin", b"*"),
+                        (b"access-control-allow-credentials", b"true"),
+                        (b"content-length", str(len(response_body)).encode()),
+                    ],
+                })
+                await send({
+                    "type": "http.response.body",
+                    "body": response_body,
+                    "more_body": False,
+                })
+                return
+            except Exception as e:
+                # Even if something fails, try to send a 500 error response
+                error_response = json.dumps({"error": str(e)}).encode('utf-8')
+                await send({
+                    "type": "http.response.start",
+                    "status": 500,
+                    "headers": [(b"content-type", b"application/json")],
+                })
+                await send({
+                    "type": "http.response.body",
+                    "body": error_response,
+                })
+                return
         
         # For all other requests, pass through to FastAPI
         await self.app(scope, receive, send)
