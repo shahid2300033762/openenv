@@ -123,14 +123,12 @@ async def health():
 
 
 @_fastapi_app.post("/reset", include_in_schema=True)
-async def reset_endpoint(**kwargs):
+async def reset_endpoint(request: Request):
     """Create a new session and reset the environment.
     
-    Accepts any request and uses defaults.
+    Accepts requests without requiring parameters.
+    Uses defaults: task_name="email_triage", index=0
     """
-    # This endpoint accepts anything - no Pydantic models, no parameters
-    # It will always use defaults: email_triage, index=0
-    
     task_name = "email_triage"
     index = 0
     
