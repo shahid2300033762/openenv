@@ -73,20 +73,10 @@ def _create_env(task_name: str, index: int = 0):
 
 
 @app.post("/reset", response_model=dict)
-async def reset(
-    task_name: str = "email_triage",
-    index: int = 0,
-):
-    """Create a new session and reset the environment.
-    
-    Accepts task_name and index via query parameters or JSON body.
-    Both are optional and default to email_triage and 0.
-    """
-    if not task_name:
-        task_name = "email_triage"
-    
+async def reset(body: CreateSessionRequest):
+    """Create a new session and reset the environment."""
     session_id = str(uuid.uuid4())
-    env = _create_env(task_name, index)
+    env = _create_env(body.task_name, body.index)
     obs = env.reset()
     _sessions[session_id] = env
     return {"session_id": session_id, "observation": obs.model_dump()}
