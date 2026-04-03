@@ -73,14 +73,26 @@ def _create_env(task_name: str, index: int = 0):
 
 
 @app.post("/reset")
-async def reset(body: CreateSessionRequest = Body(default=CreateSessionRequest())):
+async def reset(request: Request):
     """Create a new session and reset the environment.
     
     Accepts JSON body with optional task_name and index fields.
     Defaults: task_name="email_triage", index=0
     """
-    task_name = body.task_name
-    index = body.index
+    task_name = "email_triage"
+    index = 0
+    
+    # Try to parse JSON body if present
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            if body and isinstance(body, dict):
+                task_name = body.get("task_name", task_name)
+                index = body.get("index", index)
+        except:
+            # Empty or invalid JSON, use defaults
+            pass
     
     # Create session
     session_id = str(uuid.uuid4())
