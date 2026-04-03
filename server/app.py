@@ -14,6 +14,7 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel as PydanticBaseModel
 
@@ -28,6 +29,15 @@ app = FastAPI(
     title="OpenEnv Workflow Evaluation Environment",
     version="1.0.0",
     description="Production-grade AI evaluation for professional workflows",
+)
+
+# Enable CORS for all origins (required for validator)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/", include_in_schema=False)
