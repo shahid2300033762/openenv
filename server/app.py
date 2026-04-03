@@ -122,6 +122,30 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
+@_fastapi_app.post("/reset", include_in_schema=True)
+async def reset_endpoint(**kwargs):
+    """Create a new session and reset the environment.
+    
+    Accepts any request and uses defaults.
+    """
+    # This endpoint accepts anything - no Pydantic models, no parameters
+    # It will always use defaults: email_triage, index=0
+    
+    task_name = "email_triage"
+    index = 0
+    
+    # Create session
+    session_id = str(uuid.uuid4())
+    env = _create_env(task_name, index)
+    obs = env.reset()
+    _sessions[session_id] = env
+    
+    return {
+        "session_id": session_id,
+        "observation": obs.model_dump()
+    }
+
+
 # Wrap FastAPI app with custom ASGI handler for /reset
 class ResetHandlerASGI:
     def __init__(self, fastapi_app):
@@ -209,4 +233,4 @@ class ResetHandlerASGI:
 
 
 # Replace with wrapped app
-app = ResetHandlerASGI(_fastapi_app)
+app = _fastapi_app
