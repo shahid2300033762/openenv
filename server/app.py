@@ -13,10 +13,10 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, Field
 
 from models import Action, Observation, Reward, State, StepResult
 from tasks.email_triage.environment import EmailTriageEnvironment
@@ -51,8 +51,8 @@ _sessions: dict = {}
 
 
 class CreateSessionRequest(PydanticBaseModel):
-    task_name: str
-    index: int = 0
+    task_name: str = Field(default="email_triage")
+    index: int = Field(default=0)
 
 
 class StepRequest(PydanticBaseModel):
@@ -72,41 +72,15 @@ def _create_env(task_name: str, index: int = 0):
     raise ValueError(f"Unknown task: {task_name}")
 
 
-@app.api_route("/reset", methods=["POST"])
-async def reset(request: Request):
+@app.post("/reset")
+async def reset(body: CreateSessionRequest = Body(default=CreateSessionRequest())):
     """Create a new session and reset the environment.
     
-    Accepts task_name and index via:
-    - JSON body: {"task_name": "email_triage", "index": 0}
-    - Query params: ?task_name=email_triage&index=0
-    - Defaults: email_triage, 0
+    Accepts JSON body with optional task_name and index fields.
+    Defaults: task_name="email_triage", index=0
     """
-    # Default values
-    task_name = "email_triage"
-    index = 0
-    
-    # Try to parse JSON body if Content-Type is JSON
-    try:
-        content_type = request.headers.get("content-type", "")
-        if content_type and "application/json" in content_type:
-            try:
-                body = await request.json()
-                if isinstance(body, dict):
-                    task_name = body.get("task_name", task_name)
-                    index = body.get("index", index)
-            except:
-                pass
-    except:
-        pass
-    
-    # Query parameters override body values
-    try:
-        if "task_name" in request.query_params:
-            task_name = request.query_params.get("task_name")
-        if "index" in request.query_params:
-            index = int(request.query_params.get("index"))
-    except:
-        pass
+    task_name = body.task_name
+    index = body.index
     
     # Create session
     session_id = str(uuid.uuid4())
