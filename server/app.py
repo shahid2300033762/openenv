@@ -88,12 +88,14 @@ async def _reset_impl(request: Request):
     }
 
 
-# Create FastAPI app (WITHOUT CORS - we'll add it at wrapper level)
+# Create FastAPI app WITHOUT OpenAPI docs (remove validation hooks)
 _fastapi_app = FastAPI(
     title="OpenEnv Workflow Evaluation Environment",
     version="1.0.0",
     description="Production-grade AI evaluation for professional workflows",
-)
+    openapi_url=None,  # Disable OpenAPI schema generation
+    docs_url=None,  # Disable Swagger docs
+    redoc_url=None,  # Disable ReDoc
 
 # Add exception handler for validation errors on /reset
 @_fastapi_app.exception_handler(RequestValidationError)
