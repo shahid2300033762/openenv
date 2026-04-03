@@ -84,6 +84,28 @@ def keyword_group_match(text: str, keyword_groups: Dict[str, List[str]]) -> str:
     return best_group
 
 
+def expand_with_synonyms(text: str) -> str:
+    """
+    Expand text with common technical synonyms for better matching.
+    Used to make grading more forgiving of phrasing variations.
+    """
+    synonyms = {
+        'sql injection': ['sqli', 'sql inject', 'query injection'],
+        'parameterized': ['prepared statement', 'placeholder', 'bind variable'],
+        'hash': ['hashing', 'hashed', 'digest'],
+        'bcrypt': ['argon2', 'scrypt', 'password hash'],
+        'validation': ['validate', 'check', 'verify'],
+        'sanitize': ['sanitization', 'escape', 'clean'],
+    }
+    
+    expanded = text.lower()
+    for key, syns in synonyms.items():
+        if key in expanded:
+            expanded += ' ' + ' '.join(syns)
+    
+    return expanded
+
+
 # ---------------------------------------------------------------------------
 # Penalty / bonus helpers
 # ---------------------------------------------------------------------------

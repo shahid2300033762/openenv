@@ -7,13 +7,14 @@ Weights:
   - Optimisation & code quality: 30%
 
 Accepts multiple valid solutions.  Deterministic.
+Enhanced with synonym expansion for better matching.
 """
 
 from __future__ import annotations
 
 from typing import Dict, List, Set
 
-from grading.utils import fuzzy_keyword_match, normalize_text, semantic_similarity
+from grading.utils import fuzzy_keyword_match, normalize_text, semantic_similarity, expand_with_synonyms
 
 
 def grade_issue_detection(
@@ -33,11 +34,16 @@ def grade_issue_detection(
     for identified in identified_issues:
         best_score = 0.0
         best_issue_id = ""
+        
+        # Expand with synonyms for better matching
+        identified_expanded = expand_with_synonyms(identified)
+        
         for expected in expected_issues:
             if expected["id"] in matched_ids:
                 continue
-            # Compare against description
-            sim = semantic_similarity(identified, expected["description"])
+            # Compare against description with synonym expansion
+            desc_expanded = expand_with_synonyms(expected["description"])
+            sim = semantic_similarity(identified_expanded, desc_expanded)
             # Also check against category keywords
             cat_bonus = 0.2 if normalize_text(expected["category"]) in normalize_text(identified) else 0.0
             total = min(1.0, sim + cat_bonus)
@@ -45,8 +51,9 @@ def grade_issue_detection(
                 best_score = total
                 best_issue_id = expected["id"]
 
-        # Threshold for matching: 0.2 (generous to accept varied phrasing)
-        if best_score >= 0.2 and best_issue_id:
+        # Threshold for matching: 0.15 (generous to accept varied phrasing)
+        # Lowered from 0.2 to be more forgiving while maintaining quality
+        if best_score >= 0.15 and best_issue_id:
             matched.append(best_issue_id)
             matched_ids.add(best_issue_id)
 

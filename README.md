@@ -56,6 +56,24 @@ This environment simulates **four professional workflows** that reflect realisti
 
 ## 🚀 Quick Start
 
+### Try the Examples First!
+
+**New to OpenEnv?** Start with ready-to-run examples:
+
+```bash
+# Run any example to see the environment in action
+python examples/email_triage_walkthrough.py
+python examples/data_cleaning_walkthrough.py
+python examples/code_review_walkthrough.py
+python examples/incident_response_walkthrough.py
+```
+
+See [`examples/README.md`](examples/README.md) for detailed explanations and score interpretations.
+
+---
+
+### Basic Usage
+
 ```python
 from tasks.email_triage.environment import EmailTriageEnvironment
 
@@ -76,8 +94,6 @@ print(result.info)         # dict
 # state() → State (typed Pydantic model)
 state = env.state()
 print(state.trace)  # Full episode trace log
-```
-
 ```
 
 ## 🏆 Reward System (Dense)
