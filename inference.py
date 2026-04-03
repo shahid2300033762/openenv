@@ -99,6 +99,12 @@ def parse_response(text: str, default_action: str) -> Action:
 
 def run_episode(env, task_name: str, client, model_name: str):
     """Run a single episode from start to finish."""
+    from baseline.agent import run_random_baseline
+    
+    # Fallback to internal heuristic if no client
+    if not client:
+        return run_random_baseline(env, task_name, verbose=False)
+    
     obs = env.reset()
     total_reward = 0.0
     step = 0
@@ -108,23 +114,17 @@ def run_episode(env, task_name: str, client, model_name: str):
 
     while True:
         step += 1
-        if client:
-            prompt = build_prompt(task_name, obs, step, history)
-            try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.0
-                )
-                action = parse_response(response.choices[0].message.content, obs.available_actions[0])
-            except Exception as e:
-                print(f"API Error: {e}")
-                from baseline.agent import run_random_baseline
-                # Fallback to internal heuristic if API fails mid-task
-                return run_random_baseline(env, task_name, verbose=False)
-        else:
-            # Fallback to internal heuristic if no client
-            from baseline.agent import run_random_baseline
+        prompt = build_prompt(task_name, obs, step, history)
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0
+            )
+            action = parse_response(response.choices[0].message.content, obs.available_actions[0])
+        except Exception as e:
+            print(f"API Error: {e}")
+            # Fallback to internal heuristic if API fails mid-task
             return run_random_baseline(env, task_name, verbose=False)
 
         result = env.step(action)
@@ -157,7 +157,10 @@ def main():
     print("FINAL SUBMISSION RESULTS")
     print("="*40)
     for name, res in results.items():
-        print(f"{name:20}: Score {res['total_reward']:.2f} in {res['steps']} steps")
+        steps = res.get('steps', res.get('total_steps', 0))
+        reward = res.get('total_reward', res.get('avg_reward', 0))
+        print(f"{name:20}: Score {reward:.2f} in {steps} steps")
+    print("="*40)
 
 
 if __name__ == "__main__":
