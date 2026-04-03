@@ -13,7 +13,7 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel as PydanticBaseModel
@@ -73,10 +73,28 @@ def _create_env(task_name: str, index: int = 0):
 
 
 @app.post("/reset", response_model=dict)
-async def reset(req: CreateSessionRequest):
-    """Create a new session and reset the environment."""
+async def reset(
+    task_name: str = None,
+    index: int = 0,
+    body: dict = Body(default=None, embed=False),
+):
+    """Create a new session and reset the environment.
+    
+    Accepts task_name and index either via:
+    - JSON body: {"task_name": "email_triage", "index": 0}
+    - Query parameters: ?task_name=email_triage&index=0
+    - Form data
+    """
+    # Support both body (JSON) and query parameters
+    if body and isinstance(body, dict):
+        task_name = body.get("task_name") or task_name
+        index = body.get("index", index)
+    
+    if not task_name:
+        raise HTTPException(400, "task_name is required")
+    
     session_id = str(uuid.uuid4())
-    env = _create_env(req.task_name, req.index)
+    env = _create_env(task_name, index)
     obs = env.reset()
     _sessions[session_id] = env
     return {"session_id": session_id, "observation": obs.model_dump()}
