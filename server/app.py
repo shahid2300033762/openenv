@@ -123,10 +123,9 @@ async def health():
 
 
 @_fastapi_app.post("/reset", include_in_schema=True)
-async def reset_endpoint(request: Request):
+def reset_endpoint_sync():
     """Create a new session and reset the environment.
     
-    Accepts requests without requiring parameters.
     Uses defaults: task_name="email_triage", index=0
     """
     task_name = "email_triage"
