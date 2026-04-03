@@ -49,7 +49,7 @@ def _create_env(task_name: str, index: int = 0):
 # Create FastAPI app with OpenAPI docs enabled
 app = FastAPI(
     title="OpenEnv Workflow Evaluation Environment",
-    version="1.0.0",
+    version="1.0.1",
     description="Production-grade AI evaluation for professional workflows",
 )
 
