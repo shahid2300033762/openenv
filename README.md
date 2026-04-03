@@ -9,6 +9,26 @@ pinned: false
 
 # OpenEnv Workflow Evaluation Environment
 
+## 🎯 Quick Start - Interactive API Testing
+
+**👉 [Click here to open Interactive API Documentation](https://shahid21-openenv.hf.space/docs) 👈**
+
+### Direct Links:
+- 🌐 **API Endpoint**: https://shahid21-openenv.hf.space/
+- 📚 **Interactive Docs (Swagger UI)**: https://shahid21-openenv.hf.space/docs
+- 📖 **Alternative Docs (ReDoc)**: https://shahid21-openenv.hf.space/redoc
+- ❤️ **Health Check**: https://shahid21-openenv.hf.space/health
+
+### How to Test:
+1. Click on the **Interactive Docs** link above
+2. Expand **POST /reset** and click "Try it out"
+3. Use: `{"task_name": "email_triage"}`
+4. Click "Execute" to create a session
+5. Copy the `session_id` from the response
+6. Expand **POST /step** and test an action!
+
+---
+
 Production-grade AI evaluation framework for testing agents on real-world professional workflows. Fully compliant with the [OpenEnv specification](https://github.com/meta-pytorch/OpenEnv).
 
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://github.com/shahid2300033762/openenv)
