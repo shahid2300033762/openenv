@@ -13,52 +13,16 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Request, Body, APIRouter
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel as PydanticBaseModel, Field
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from models import Action, Observation, Reward, State, StepResult
 from tasks.email_triage.environment import EmailTriageEnvironment
 from tasks.data_cleaning.environment import DataCleaningEnvironment
 from tasks.code_review.environment import CodeReviewEnvironment
 from tasks.incident_response.environment import IncidentResponseEnvironment
-
-
-app = FastAPI(
-    title="OpenEnv Workflow Evaluation Environment",
-    version="1.0.0",
-    description="Production-grade AI evaluation for professional workflows",
-)
-
-# Custom ASGI middleware to handle /reset before FastAPI validation
-class ResetHandlerMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.url.path == "/reset" and request.method == "POST":
-            try:
-                result = await _reset_impl(request)
-                return JSONResponse(result)
-            except Exception as e:
-                return JSONResponse({"error": str(e)}, status_code=500)
-        return await call_next(request)
-
-app.add_middleware(ResetHandlerMiddleware)
-
-# Enable CORS for all origins (required for validator)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/", include_in_schema=False)
-async def root():
-    """Redirect to documentation."""
-    return RedirectResponse(url="/docs")
 
 
 # In-memory session store
@@ -96,11 +60,14 @@ async def _reset_impl(request: Request):
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
         try:
-            body = await request.json()
-            # body could be dict, None, or empty dict—all valid
-            if isinstance(body, dict):
-                task_name = body.get("task_name", task_name)
-                index = body.get("index", index)
+            # Read raw body to check if it exists
+            body_bytes = await request.body()
+            if body_bytes:
+                body = json.loads(body_bytes)
+                # body could be dict, None, or empty dict—all valid
+                if isinstance(body, dict):
+                    task_name = body.get("task_name", task_name)
+                    index = body.get("index", index)
         except Exception:
             # Empty body, malformed JSON, or other error—use defaults
             pass
@@ -117,7 +84,30 @@ async def _reset_impl(request: Request):
     }
 
 
-@app.get("/state/{session_id}", response_model=dict)
+# Create FastAPI app
+_fastapi_app = FastAPI(
+    title="OpenEnv Workflow Evaluation Environment",
+    version="1.0.0",
+    description="Production-grade AI evaluation for professional workflows",
+)
+
+# Enable CORS for all origins (required for validator)
+_fastapi_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@_fastapi_app.get("/", include_in_schema=False)
+async def root():
+    """Redirect to documentation."""
+    return RedirectResponse(url="/docs")
+
+
+@_fastapi_app.get("/state/{session_id}", response_model=dict)
 async def state(session_id: str):
     """Get current session state."""
     env = _sessions.get(session_id)
@@ -126,7 +116,7 @@ async def state(session_id: str):
     return env.state().model_dump()
 
 
-@app.post("/step", response_model=dict)
+@_fastapi_app.post("/step", response_model=dict)
 async def step(req: StepRequest):
     """Execute an action in the environment."""
     env = _sessions.get(req.session_id)
@@ -136,6 +126,30 @@ async def step(req: StepRequest):
     return result.model_dump()
 
 
-@app.get("/health")
+@_fastapi_app.get("/health")
 async def health():
     return {"status": "ok", "version": "1.0.0"}
+
+
+# Wrap FastAPI app with custom ASGI handler for /reset
+class ResetHandlerASGI:
+    def __init__(self, fastapi_app):
+        self.fastapi_app = fastapi_app
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/reset" and scope["method"] == "POST":
+            # Handle /reset with custom logic, bypassing FastAPI validation
+            request = Request(scope, receive)
+            try:
+                result = await _reset_impl(request)
+                response = JSONResponse(result)
+            except Exception as e:
+                response = JSONResponse({"error": str(e)}, status_code=500)
+            await response(scope, receive, send)
+        else:
+            # All other routes go through FastAPI
+            await self.fastapi_app(scope, receive, send)
+
+
+# Replace with wrapped app
+app = ResetHandlerASGI(_fastapi_app)
