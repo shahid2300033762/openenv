@@ -187,19 +187,24 @@ async def health():
 
 
 @_fastapi_app.post("/reset", include_in_schema=True)
-def reset_endpoint_sync(
-    body: Optional[dict] = Body(default=None)
-):
+async def reset_endpoint_sync(request: Request):
     """Create a new session and reset the environment.
     
     Accepts optional JSON body with task_name and index fields.
     Uses defaults: task_name="email_triage", index=0
     """
-    if body is None:
-        body = {}
+    task_name = "email_triage"
+    index = 0
     
-    task_name = body.get("task_name", "email_triage")
-    index = body.get("index", 0)
+    # Try to read body if present
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            task_name = body.get("task_name", task_name)
+            index = body.get("index", index)
+    except Exception:
+        # No body or invalid JSON, use defaults
+        pass
     
     # Create session
     session_id = str(uuid.uuid4())
