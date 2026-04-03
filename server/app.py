@@ -13,7 +13,7 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel as PydanticBaseModel, Field
@@ -123,13 +123,16 @@ async def health():
 
 
 @_fastapi_app.post("/reset", include_in_schema=True)
-def reset_endpoint_sync():
+def reset_endpoint_sync(
+    body: dict = Body(default_factory=dict)
+):
     """Create a new session and reset the environment.
     
+    Accepts optional JSON body with task_name and index fields.
     Uses defaults: task_name="email_triage", index=0
     """
-    task_name = "email_triage"
-    index = 0
+    task_name = body.get("task_name", "email_triage")
+    index = body.get("index", 0)
     
     # Create session
     session_id = str(uuid.uuid4())
