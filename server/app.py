@@ -13,7 +13,7 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel as PydanticBaseModel
@@ -76,20 +76,12 @@ def _create_env(task_name: str, index: int = 0):
 async def reset(
     task_name: str = "email_triage",
     index: int = 0,
-    body: dict = Body(default=None, embed=False),
 ):
     """Create a new session and reset the environment.
     
-    Accepts task_name and index either via:
-    - JSON body: {"task_name": "email_triage", "index": 0}
-    - Query parameters: ?task_name=email_triage&index=0
-    - Defaults to email_triage
+    Accepts task_name and index via query parameters or JSON body.
+    Both are optional and default to email_triage and 0.
     """
-    # Support both body (JSON) and query parameters
-    if body and isinstance(body, dict) and "task_name" in body:
-        task_name = body.get("task_name")
-        index = body.get("index", index)
-    
     if not task_name:
         task_name = "email_triage"
     
