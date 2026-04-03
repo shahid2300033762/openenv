@@ -84,20 +84,11 @@ async def _reset_impl(request: Request):
     }
 
 
-# Create FastAPI app
+# Create FastAPI app (WITHOUT CORS - we'll add it at wrapper level)
 _fastapi_app = FastAPI(
     title="OpenEnv Workflow Evaluation Environment",
     version="1.0.0",
     description="Production-grade AI evaluation for professional workflows",
-)
-
-# Enable CORS for all origins (required for validator)
-_fastapi_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 
@@ -145,10 +136,33 @@ class ResetHandlerASGI:
                 response = JSONResponse(result)
             except Exception as e:
                 response = JSONResponse({"error": str(e)}, status_code=500)
-            await response(scope, receive, send)
+            
+            # Send response with CORS headers
+            await send({
+                "type": "http.response.start",
+                "status": response.status_code,
+                "headers": [
+                    *response.headers.raw,
+                    (b"access-control-allow-origin", b"*"),
+                    (b"access-control-allow-methods", b"*"),
+                    (b"access-control-allow-headers", b"*"),
+                    (b"access-control-allow-credentials", b"true"),
+                ],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": response.body,
+            })
         else:
-            # All other routes go through FastAPI
-            await self.fastapi_app(scope, receive, send)
+            # All other routes go through FastAPI with CORS
+            cors_app = CORSMiddleware(
+                self.fastapi_app,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            await cors_app(scope, receive, send)
 
 
 # Replace with wrapped app
