@@ -72,7 +72,7 @@ def _create_env(task_name: str, index: int = 0):
     raise ValueError(f"Unknown task: {task_name}")
 
 
-@app.post("/reset", response_model=dict)
+@app.post("/reset")
 async def reset(request: Request):
     """Create a new session and reset the environment.
     
@@ -81,32 +81,40 @@ async def reset(request: Request):
     - Query params: ?task_name=email_triage&index=0
     - Defaults: email_triage, 0
     """
-    # Try to get from JSON body first
+    # Default values
     task_name = "email_triage"
     index = 0
     
+    # Try to parse JSON body if Content-Type is JSON
     try:
-        if request.headers.get("content-type", "").startswith("application/json"):
+        content_type = request.headers.get("content-type", "")
+        if content_type and "application/json" in content_type:
             body = await request.json()
-            task_name = body.get("task_name", task_name)
-            index = body.get("index", index)
+            if isinstance(body, dict):
+                task_name = body.get("task_name", task_name)
+                index = body.get("index", index)
+    except Exception as e:
+        pass  # If body parsing fails, use defaults/query params
+    
+    # Query parameters override body values
+    try:
+        if "task_name" in request.query_params:
+            task_name = request.query_params.get("task_name")
+        if "index" in request.query_params:
+            index = int(request.query_params.get("index"))
     except:
-        pass  # Body might be empty or invalid JSON
+        pass
     
-    # Also check query parameters (they override body if present)
-    if "task_name" in request.query_params:
-        task_name = request.query_params["task_name"]
-    if "index" in request.query_params:
-        try:
-            index = int(request.query_params["index"])
-        except:
-            pass
-    
+    # Create session
     session_id = str(uuid.uuid4())
     env = _create_env(task_name, index)
     obs = env.reset()
     _sessions[session_id] = env
-    return {"session_id": session_id, "observation": obs.model_dump()}
+    
+    return {
+        "session_id": session_id,
+        "observation": obs.model_dump()
+    }
 
 
 @app.post("/step", response_model=dict)
