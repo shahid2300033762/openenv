@@ -96,6 +96,7 @@ _fastapi_app = FastAPI(
     openapi_url=None,  # Disable OpenAPI schema generation
     docs_url=None,  # Disable Swagger docs
     redoc_url=None,  # Disable ReDoc
+)
 
 # Add exception handler for validation errors on /reset
 @_fastapi_app.exception_handler(RequestValidationError)
