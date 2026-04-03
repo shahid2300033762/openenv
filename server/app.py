@@ -74,7 +74,7 @@ def _create_env(task_name: str, index: int = 0):
 
 @app.post("/reset", response_model=dict)
 async def reset(
-    task_name: str = None,
+    task_name: str = "email_triage",
     index: int = 0,
     body: dict = Body(default=None, embed=False),
 ):
@@ -83,15 +83,15 @@ async def reset(
     Accepts task_name and index either via:
     - JSON body: {"task_name": "email_triage", "index": 0}
     - Query parameters: ?task_name=email_triage&index=0
-    - Form data
+    - Defaults to email_triage
     """
     # Support both body (JSON) and query parameters
-    if body and isinstance(body, dict):
-        task_name = body.get("task_name") or task_name
+    if body and isinstance(body, dict) and "task_name" in body:
+        task_name = body.get("task_name")
         index = body.get("index", index)
     
     if not task_name:
-        raise HTTPException(400, "task_name is required")
+        task_name = "email_triage"
     
     session_id = str(uuid.uuid4())
     env = _create_env(task_name, index)
