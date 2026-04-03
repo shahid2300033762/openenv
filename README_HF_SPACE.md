@@ -18,6 +18,21 @@ tags:
 
 Production-grade AI evaluation framework for testing agents on real-world professional workflows.
 
+## 🚀 Quick Start - Try It Now!
+
+**👉 [Open Interactive API Documentation](/docs)** 👈
+
+Click the link above to access the **Swagger UI** where you can:
+- ✅ Test all API endpoints interactively
+- ✅ See real-time responses
+- ✅ Try different tasks (Email Triage, Data Cleaning, Code Review, Incident Response)
+- ✅ Execute actions and see rewards
+
+### Direct Links:
+- **Interactive API Docs**: [/docs](/docs)
+- **Alternative API Docs**: [/redoc](/redoc)
+- **Health Check**: [/health](/health)
+
 ## Features
 
 - 4 realistic tasks: Email Triage, Data Cleaning, Code Review, Incident Response
@@ -34,9 +49,23 @@ Production-grade AI evaluation framework for testing agents on real-world profes
 - `GET /state/{session_id}` - Get current state
 - `GET /health` - Health check
 
+## Quick Test Example
+
+1. Go to [/docs](/docs)
+2. Click on **POST /reset**
+3. Click "Try it out"
+4. Use this JSON:
+```json
+{
+  "task_name": "email_triage",
+  "index": 0
+}
+```
+5. Click "Execute" and see the response!
+
 ## Usage
 
-See the [GitHub repository](https://github.com/yourusername/openenv-workflow-eval) for complete documentation.
+See the [GitHub repository](https://github.com/shahid2300033762/openenv) for complete documentation.
 
 ## Environment Variables
 
