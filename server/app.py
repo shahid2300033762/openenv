@@ -13,10 +13,12 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, Request, Body
+from fastapi import FastAPI, HTTPException, Request, Body, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from pydantic import BaseModel as PydanticBaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from models import Action, Observation, Reward, State, StepResult
 from tasks.email_triage.environment import EmailTriageEnvironment
@@ -30,6 +32,19 @@ app = FastAPI(
     version="1.0.0",
     description="Production-grade AI evaluation for professional workflows",
 )
+
+# Custom ASGI middleware to handle /reset before FastAPI validation
+class ResetHandlerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/reset" and request.method == "POST":
+            try:
+                result = await _reset_impl(request)
+                return JSONResponse(result)
+            except Exception as e:
+                return JSONResponse({"error": str(e)}, status_code=500)
+        return await call_next(request)
+
+app.add_middleware(ResetHandlerMiddleware)
 
 # Enable CORS for all origins (required for validator)
 app.add_middleware(
@@ -72,26 +87,22 @@ def _create_env(task_name: str, index: int = 0):
     raise ValueError(f"Unknown task: {task_name}")
 
 
-@app.post("/reset")
-async def reset(request: Request):
-    """Create a new session and reset the environment.
-    
-    Accepts JSON body with optional task_name and index fields.
-    Defaults: task_name="email_triage", index=0
-    """
+async def _reset_impl(request: Request):
+    """Implementation of reset without FastAPI validation."""
     task_name = "email_triage"
     index = 0
     
-    # Try to parse JSON body if present
+    # Try to parse JSON body if Content-Type says JSON
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
         try:
             body = await request.json()
-            if body and isinstance(body, dict):
+            # body could be dict, None, or empty dict—all valid
+            if isinstance(body, dict):
                 task_name = body.get("task_name", task_name)
                 index = body.get("index", index)
-        except:
-            # Empty or invalid JSON, use defaults
+        except Exception:
+            # Empty body, malformed JSON, or other error—use defaults
             pass
     
     # Create session
@@ -106,6 +117,15 @@ async def reset(request: Request):
     }
 
 
+@app.get("/state/{session_id}", response_model=dict)
+async def state(session_id: str):
+    """Get current session state."""
+    env = _sessions.get(session_id)
+    if not env:
+        raise HTTPException(404, "Session not found")
+    return env.state().model_dump()
+
+
 @app.post("/step", response_model=dict)
 async def step(req: StepRequest):
     """Execute an action in the environment."""
@@ -114,15 +134,6 @@ async def step(req: StepRequest):
         raise HTTPException(404, "Session not found")
     result = env.step(req.action)
     return result.model_dump()
-
-
-@app.get("/state/{session_id}", response_model=dict)
-async def state(session_id: str):
-    """Get current session state."""
-    env = _sessions.get(session_id)
-    if not env:
-        raise HTTPException(404, "Session not found")
-    return env.state().model_dump()
 
 
 @app.get("/health")
