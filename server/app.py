@@ -19,6 +19,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse as StarletteJSONResponse
+from starlette.routing import Route
 from pydantic import BaseModel as PydanticBaseModel, Field
 
 from models import Action, Observation, Reward, State, StepResult
@@ -181,92 +182,42 @@ async def step(req: StepRequest):
     return result.model_dump()
 
 
-@_fastapi_app.get("/health")
-async def health():
-    return {"status": "ok", "version": "1.0.0"}
-
-
-# /reset endpoint - accepts anything, no validation
-@_fastapi_app.api_route("/reset", methods=["POST"])
-async def reset_endpoint():
+# /reset endpoint - raw Starlette endpoint that bypasses FastAPI validation
+async def reset_handler(request: Request):
     """Create a new session and reset the environment."""
-    # This endpoint accepts POST with any body or no body
-    # Always returns a session with defaults
-    
     task_name = "email_triage"
     index = 0
+    
+    # Try to read body
+    try:
+        if request.method == "POST":
+            body = await request.body()
+            if body:
+                data = json.loads(body)
+                if isinstance(data, dict):
+                    task_name = data.get("task_name", task_name)
+                    index = data.get("index", index)
+    except:
+        pass
     
     session_id = str(uuid.uuid4())
     env = _create_env(task_name, index)
     obs = env.reset()
     _sessions[session_id] = env
     
-    return {
+    return JSONResponse({
         "session_id": session_id,
         "observation": obs.model_dump()
-    }
+    })
+
+# Add route using Starlette directly - bypasses Pydantic
+_fastapi_app.router.routes.insert(0, Route("/reset", reset_handler, methods=["POST"]))
 
 
-# Wrap app with raw ASGI handler for /reset
-original_fastapi_app = _fastapi_app
+@_fastapi_app.get("/health")
+async def health():
+    return {"status": "ok", "version": "1.0.0"}
 
-class ResetHandlerASGI:
-    def __init__(self, app):
-        self.app = app
-    
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http" and scope["path"] == "/reset" and scope["method"] == "POST":
-            # Read body completely
-            body_parts = []
-            while True:
-                message = await receive()
-                if message["type"] == "http.request":
-                    body_parts.append(message.get("body", b""))
-                    if not message.get("more_body"):
-                        break
-            
-            body = b"".join(body_parts)
-            
-            # Parse body
-            task_name = "email_triage"
-            index = 0
-            
-            if body:
-                try:
-                    data = json.loads(body.decode("utf-8"))
-                    if isinstance(data, dict):
-                        task_name = data.get("task_name", task_name)
-                        index = data.get("index", index)
-                except:
-                    pass
-            
-            # Create session
-            session_id = str(uuid.uuid4())
-            env = _create_env(task_name, index)
-            obs = env.reset()
-            _sessions[session_id] = env
-            
-            result = json.dumps({
-                "session_id": session_id,
-                "observation": obs.model_dump()
-            }).encode("utf-8")
-            
-            await send({
-                "type": "http.response.start",
-                "status": 200,
-                "headers": [
-                    (b"content-type", b"application/json"),
-                    (b"access-control-allow-origin", b"*"),
-                    (b"access-control-allow-methods", b"*"),
-                    (b"access-control-allow-headers", b"*"),
-                    (b"access-control-allow-credentials", b"true"),
-                ],
-            })
-            await send({
-                "type": "http.response.body",
-                "body": result,
-            })
-        else:
-            await self.app(scope, receive, send)
 
-app = ResetHandlerASGI(original_fastapi_app)
+# Use FastAPI app directly, no wrapper
+app = _fastapi_app
