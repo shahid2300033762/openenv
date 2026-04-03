@@ -72,7 +72,7 @@ def _create_env(task_name: str, index: int = 0):
     raise ValueError(f"Unknown task: {task_name}")
 
 
-@app.post("/reset")
+@app.api_route("/reset", methods=["POST"])
 async def reset(request: Request):
     """Create a new session and reset the environment.
     
@@ -89,12 +89,15 @@ async def reset(request: Request):
     try:
         content_type = request.headers.get("content-type", "")
         if content_type and "application/json" in content_type:
-            body = await request.json()
-            if isinstance(body, dict):
-                task_name = body.get("task_name", task_name)
-                index = body.get("index", index)
-    except Exception as e:
-        pass  # If body parsing fails, use defaults/query params
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    task_name = body.get("task_name", task_name)
+                    index = body.get("index", index)
+            except:
+                pass
+    except:
+        pass
     
     # Query parameters override body values
     try:
