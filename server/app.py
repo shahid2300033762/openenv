@@ -124,3 +124,18 @@ async def step(req: StepRequest):
 async def health():
     """Health check endpoint."""
     return {"status": "ok", "version": "1.0.0"}
+
+
+def main():
+    """Entry point for the server."""
+    import uvicorn
+    uvicorn.run(
+        "server.app:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 7860)),
+        reload=False,
+    )
+
+
+if __name__ == "__main__":
+    main()
