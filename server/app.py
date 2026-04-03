@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse as StarletteJSONResponse
 from pydantic import BaseModel as PydanticBaseModel, Field
@@ -92,6 +93,26 @@ _fastapi_app = FastAPI(
     version="1.0.0",
     description="Production-grade AI evaluation for professional workflows",
 )
+
+# Add exception handler for validation errors on /reset
+@_fastapi_app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation errors - return default session for /reset."""
+    if request.url.path == "/reset":
+        # Return default session instead of error
+        session_id = str(uuid.uuid4())
+        env = _create_env("email_triage", 0)
+        obs = env.reset()
+        _sessions[session_id] = env
+        return JSONResponse({
+            "session_id": session_id,
+            "observation": obs.model_dump()
+        })
+    # For other endpoints, return the validation error
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
 
 
 # Custom middleware to handle /reset validation errors
