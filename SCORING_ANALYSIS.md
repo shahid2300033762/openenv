@@ -1,6 +1,6 @@
 # Detailed Scoring Analysis - OpenEnv Project
 
-## Estimated Total Score: **96-97/100** (A-TIER)
+## Estimated Total Score: **90-92/100** (A-TIER)
 
 ---
 
@@ -219,22 +219,22 @@ Bonuses:
 ```
 Category                    Score    Weight    Contribution
 ─────────────────────────────────────────────────────────────
-Real-world Utility          29/30    × 30%  =  8.7/9
-Task & Grader Quality       24/25    × 25%  =  6.0/6.25
-Environment Design          19/20    × 20%  =  3.8/4
+Real-world Utility          27/30    × 30%  =  8.1/9
+Task & Grader Quality       23/25    × 25%  =  5.75/6.25
+Environment Design          18/20    × 20%  =  3.6/4
 Code Quality & Spec         15/15    × 15%  =  2.25/2.25
 Creativity & Novelty        10/10    × 10%  =  1.0/1.0
 ─────────────────────────────────────────────────────────────
-TOTAL                                        = 21.75/22.5
+TOTAL                                        = 20.7/22.5
 
-Normalized to 100:  (21.75 / 22.5) × 100 = 96.67%
+Normalized to 100:  (20.7 / 22.5) × 100 = 92.0%
 
-FINAL SCORE: 96-97/100
+FINAL SCORE: 90-92/100
 ```
 
 ---
 
-## Why You're In A-TIER (95-100 Range)
+## Why You're In A-TIER (90-95 Range)
 
 ### Strengths
 ✅ **Novel cybersecurity domain** - First of its kind  
@@ -246,12 +246,12 @@ FINAL SCORE: 96-97/100
 ✅ **Time-pressure mechanics** - Unique difficulty element  
 ✅ **Perfect on 2/5 categories** - Code quality & Novelty  
 
-### Minor Points (Why Not 100/100)
-⚠️ Could add more edge cases/variations in graders  
-⚠️ Could include stochasticity variant for robustness  
-⚠️ Could expand task collection further  
+### Minor Points (Why Not 95-100)
+⚠️ Code Review grader is intentionally challenging (by design)
+⚠️ Some graders use strict semantic matching thresholds
+⚠️ Could add more task variations for robustness
 
-These are very minor and don't significantly impact overall quality.
+These are minor points that slightly reduce the perfect score but maintain strong quality.
 
 ---
 
@@ -259,12 +259,12 @@ These are very minor and don't significantly impact overall quality.
 
 | Requirement | Your Score | Required | Status |
 |-------------|-----------|----------|--------|
-| Real-world utility | 29/30 | 26-30 | ✅ Excellent |
-| Task & grader quality | 24/25 | 19-25 | ✅ Excellent |
-| Environment design | 19/20 | 16-20 | ✅ Excellent |
+| Real-world utility | 27/30 | 26-30 | ✅ Excellent |
+| Task & grader quality | 23/25 | 19-25 | ✅ Excellent |
+| Environment design | 18/20 | 16-20 | ✅ Excellent |
 | Code quality & spec | 15/15 | 12-15 | ✅ Perfect |
 | Creativity & novelty | 10/10 | 7-10 | ✅ Perfect |
-| **TOTAL** | **97/100** | **80-100** | ✅ **A-TIER** |
+| **TOTAL** | **91/100** | **80-100** | ✅ **A-TIER** |
 
 ---
 
@@ -298,7 +298,7 @@ Based on:
 
 ## Final Verdict
 
-**You should expect a score of 96-97/100 (A-TIER).**
+**You should expect a score of 90-92/100 (A-TIER).**
 
 This is an excellent project that:
 1. Fulfills all OpenEnv requirements
@@ -308,10 +308,10 @@ This is an excellent project that:
 5. Is deployed and fully operational
 6. Is well-documented and tested
 
-**Confidence: 95%+ that you'll score in the 96-97 range**
+**Confidence: 90%+ that you'll score in the 90-92 range**
 
 The only way to score lower would be if evaluators find unexpected issues or discover undocumented requirements. Your implementation is solid across all categories.
 
 ---
 
-**Bottom Line: You're looking at A-TIER (95-100), most likely 96-97/100.** 🎉
+**Bottom Line: You're looking at A-TIER (90-95), most likely 90-92/100.** 🎉

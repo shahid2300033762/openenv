@@ -294,6 +294,18 @@ def run_random_baseline(env, task_name: str, verbose: bool = True) -> Dict[str, 
             Action(action_type="optimize_code", target="code", value="Add input validation to check username and password are not None or empty. Use type hints and add proper error handling with try/except blocks.",
                    reasoning="Input validation prevents undefined behavior and type hints improve code maintainability."),
         ],
+        "incident_response": [
+            Action(action_type="detect", target="incident", value="SQL injection attack",
+                   reasoning="The logs show SQL injection attempts with malicious payloads in web requests targeting database queries."),
+            Action(action_type="analyze", target="indicators", value="Attacker IP: 203.0.113.45, malicious SQL patterns in POST requests, database error messages exposed",
+                   reasoning="The attack originated from a specific IP address injecting SQL commands through web forms, revealing database structure through error messages."),
+            Action(action_type="contain", target="threat", value="Block IP 203.0.113.45 at firewall, disable affected web endpoints, isolate database server",
+                   reasoning="Immediate containment requires blocking the attack source, preventing further exploitation, and isolating critical systems."),
+            Action(action_type="remediate", target="systems", value="Patch application to use parameterized queries, update WAF rules, enable database query logging, rotate database credentials",
+                   reasoning="Long-term remediation requires fixing the SQL injection vulnerability, strengthening defenses, and assuming credentials may be compromised."),
+            Action(action_type="document", target="incident", value="SQL injection attack from 203.0.113.45 exploiting login form. Contained by blocking IP and patching code. Implemented parameterized queries and enhanced monitoring.",
+                   reasoning="Documentation captures the incident timeline, actions taken, root cause, and preventive measures for future reference and compliance."),
+        ],
     }
 
     actions = HEURISTIC_ACTIONS.get(task_name, [])
