@@ -186,6 +186,27 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
+# /reset endpoint - accepts anything, no validation
+@_fastapi_app.api_route("/reset", methods=["POST"])
+async def reset_endpoint():
+    """Create a new session and reset the environment."""
+    # This endpoint accepts POST with any body or no body
+    # Always returns a session with defaults
+    
+    task_name = "email_triage"
+    index = 0
+    
+    session_id = str(uuid.uuid4())
+    env = _create_env(task_name, index)
+    obs = env.reset()
+    _sessions[session_id] = env
+    
+    return {
+        "session_id": session_id,
+        "observation": obs.model_dump()
+    }
+
+
 # Wrap app with raw ASGI handler for /reset
 original_fastapi_app = _fastapi_app
 
