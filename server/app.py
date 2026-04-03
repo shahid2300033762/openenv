@@ -4,7 +4,7 @@ FastAPI server for the OpenEnv evaluation environment.
 Exposes the environment via HTTP/WebSocket for remote access.
 """
 
-from __future__ import annotations
+from typing import Optional
 
 import json
 import os
@@ -124,13 +124,16 @@ async def health():
 
 @_fastapi_app.post("/reset", include_in_schema=True)
 def reset_endpoint_sync(
-    body: dict = Body(default_factory=dict)
+    body: Optional[dict] = Body(default=None)
 ):
     """Create a new session and reset the environment.
     
     Accepts optional JSON body with task_name and index fields.
     Uses defaults: task_name="email_triage", index=0
     """
+    if body is None:
+        body = {}
+    
     task_name = body.get("task_name", "email_triage")
     index = body.get("index", 0)
     
