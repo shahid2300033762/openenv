@@ -186,37 +186,64 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
-@_fastapi_app.post("/reset", include_in_schema=True)
-async def reset_endpoint_sync(request: Request):
-    """Create a new session and reset the environment.
-    
-    Accepts optional JSON body with task_name and index fields.
-    Uses defaults: task_name="email_triage", index=0
-    """
-    task_name = "email_triage"
-    index = 0
-    
-    # Try to read body if present
-    try:
-        body = await request.json()
-        if isinstance(body, dict):
-            task_name = body.get("task_name", task_name)
-            index = body.get("index", index)
-    except Exception:
-        # No body or invalid JSON, use defaults
-        pass
-    
-    # Create session
-    session_id = str(uuid.uuid4())
-    env = _create_env(task_name, index)
-    obs = env.reset()
-    _sessions[session_id] = env
-    
-    return {
-        "session_id": session_id,
-        "observation": obs.model_dump()
-    }
-
-
 # Replace with wrapped app
-app = _fastapi_app
+class ResetBypassASGI:
+    """Wrap FastAPI to handle /reset before Pydantic validation."""
+    def __init__(self, fastapi_app):
+        self.fastapi_app = fastapi_app
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/reset" and scope["method"] == "POST":
+            # Bypass FastAPI entirely - handle at raw ASGI level
+            body = b""
+            while True:
+                message = await receive()
+                body += message.get("body", b"")
+                if not message.get("more_body", False):
+                    break
+            
+            # Parse JSON if present
+            task_name = "email_triage"
+            index = 0
+            try:
+                if body:
+                    data = json.loads(body)
+                    if isinstance(data, dict):
+                        task_name = data.get("task_name", task_name)
+                        index = data.get("index", index)
+            except Exception:
+                pass
+            
+            # Create session
+            session_id = str(uuid.uuid4())
+            env = _create_env(task_name, index)
+            obs = env.reset()
+            _sessions[session_id] = env
+            
+            result = {
+                "session_id": session_id,
+                "observation": obs.model_dump()
+            }
+            
+            # Send response
+            response_body = json.dumps(result).encode("utf-8")
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"access-control-allow-origin", b"*"),
+                    (b"access-control-allow-credentials", b"true"),
+                    (b"access-control-allow-methods", b"*"),
+                    (b"access-control-allow-headers", b"*"),
+                ],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": response_body,
+            })
+        else:
+            # All other routes through FastAPI
+            await self.fastapi_app(scope, receive, send)
+
+app = ResetBypassASGI(_fastapi_app)
