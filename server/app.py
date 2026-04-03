@@ -98,59 +98,8 @@ _fastapi_app = FastAPI(
     redoc_url=None,  # Disable ReDoc
 )
 
-# Add exception handler for validation errors on /reset
-@_fastapi_app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Handle validation errors - return default session for /reset."""
-    if request.url.path == "/reset":
-        # Return default session instead of error
-        session_id = str(uuid.uuid4())
-        env = _create_env("email_triage", 0)
-        obs = env.reset()
-        _sessions[session_id] = env
-        return JSONResponse({
-            "session_id": session_id,
-            "observation": obs.model_dump()
-        })
-    # For other endpoints, return the validation error
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()},
-    )
-
-
-# Custom middleware to handle /reset validation errors
-class ResetErrorHandlerMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        if request.url.path == "/reset" and request.method == "POST":
-            try:
-                response = await call_next(request)
-                # If it's a 422 error on /reset, convert to 200 with default
-                if response.status_code == 422:
-                    session_id = str(uuid.uuid4())
-                    env = _create_env("email_triage", 0)
-                    obs = env.reset()
-                    _sessions[session_id] = env
-                    return StarletteJSONResponse({
-                        "session_id": session_id,
-                        "observation": obs.model_dump()
-                    })
-                return response
-            except Exception:
-                # If there's any error, return default session
-                session_id = str(uuid.uuid4())
-                env = _create_env("email_triage", 0)
-                obs = env.reset()
-                _sessions[session_id] = env
-                return StarletteJSONResponse({
-                    "session_id": session_id,
-                    "observation": obs.model_dump()
-                })
-        return await call_next(request)
-
-_fastapi_app.add_middleware(ResetErrorHandlerMiddleware)
-
-# Enable CORS for all origins (required for validator)
+# Don't add middleware for /reset - ASGI interceptor handles it directly
+# Just enable CORS for other endpoints
 _fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
