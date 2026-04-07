@@ -25,7 +25,13 @@ def get_openai_client():
         print("Missing dependencies. Install: pip install openai python-dotenv")
         return None, "mistralai/Mistral-7B-Instruct-v0.2"
 
-    api_base_url = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1/")
+    # API_BASE_URL is REQUIRED for competition evaluation
+    api_base_url = os.environ.get("API_BASE_URL")
+    if not api_base_url:
+        print("CRITICAL: API_BASE_URL not set. This is required for competition evaluation.")
+        print("Falling back to heuristic agent.")
+        return None, "mistralai/Mistral-7B-Instruct-v0.2"
+    
     model_name = os.environ.get("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.2")
     
     # Prioritize API_KEY as required by the LiteLLM proxy in Phase 2
@@ -221,7 +227,7 @@ def main():
     try:
         output_data = {
             "config": {
-                "api_base_url": os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1/"),
+                "api_base_url": os.environ.get("API_BASE_URL", "NOT_SET"),
                 "model_name": model_name,
                 "has_api_key": client is not None
             },

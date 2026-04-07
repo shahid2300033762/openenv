@@ -34,6 +34,9 @@ def _get_openai_client():
 
     if not api_key:
         raise ValueError("Neither API_KEY nor OPENAI_API_KEY is set.")
+    
+    if not base_url:
+        raise ValueError("API_BASE_URL must be set for competition evaluation.")
 
     return OpenAI(api_key=api_key, base_url=base_url)
 
