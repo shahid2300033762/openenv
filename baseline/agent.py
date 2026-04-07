@@ -17,25 +17,25 @@ from models import Action
 
 
 def _get_openai_client():
-    """Lazy-load OpenAI client."""
+    """Lazy-load OpenAI client with competition-required environment variables."""
     try:
         from openai import OpenAI  # type: ignore
         from dotenv import load_dotenv  # type: ignore
-        
-        # Load environment variables from .env file, overriding terminal cache
         load_dotenv(override=True)
     except ImportError:
-        raise ImportError(
-            "openai and python-dotenv packages requested for baseline agent. "
-            "Install with: pip install openai python-dotenv"
-        )
-    api_key = os.environ.get("OPENAI_API_KEY", "")
+        raise ImportError("openai and python-dotenv not found.")
+
+    api_key = (
+        os.environ.get("API_KEY") or 
+        os.environ.get("OPENAI_API_KEY", "")
+    ).strip()
+    
+    base_url = os.environ.get("API_BASE_URL")
+
     if not api_key:
-        raise ValueError(
-            "OPENAI_API_KEY environment variable not set. "
-            "Set it before running the baseline agent."
-        )
-    return OpenAI(api_key=api_key)
+        raise ValueError("Neither API_KEY nor OPENAI_API_KEY is set.")
+
+    return OpenAI(api_key=api_key, base_url=base_url)
 
 
 def build_prompt(

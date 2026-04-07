@@ -27,16 +27,22 @@ def get_openai_client():
 
     api_base_url = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1/")
     model_name = os.environ.get("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.2")
-    hf_token = (os.environ.get("HF_TOKEN") or os.environ.get("OPENAI_API_KEY", "")).strip()
+    
+    # Prioritize API_KEY as required by the LiteLLM proxy in Phase 2
+    api_key = (
+        os.environ.get("API_KEY") or 
+        os.environ.get("HF_TOKEN") or 
+        os.environ.get("OPENAI_API_KEY", "")
+    ).strip()
 
-    if not hf_token:
-        print("WARNING: HF_TOKEN (or OPENAI_API_KEY) not set or empty. Falling back to heuristic agent.")
+    if not api_key:
+        print("WARNING: API_KEY (HF_TOKEN / OPENAI_API_KEY) not set. Falling back to heuristic agent.")
         return None, model_name
 
     try:
         client = OpenAI(
             base_url=api_base_url,
-            api_key=hf_token
+            api_key=api_key
         )
         return client, model_name
     except Exception as e:
