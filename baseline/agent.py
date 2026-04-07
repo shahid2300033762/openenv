@@ -156,6 +156,9 @@ def run_baseline_agent(env, task_name: str, verbose: bool = True) -> Dict[str, A
     obs = env.reset()
     total_reward = 0.0
     step = 0
+    
+    # Required [START] logging format for competition
+    print(f"[START] task={task_name}", flush=True)
 
     if verbose:
         print(f"\n{'='*60}")
@@ -216,6 +219,9 @@ def run_baseline_agent(env, task_name: str, verbose: bool = True) -> Dict[str, A
         done = result.done
 
         total_reward += reward.score
+        
+        # Required [STEP] logging format for competition
+        print(f"[STEP] step={step} action={action.action_type} reward={reward.score:.4f} done={done}", flush=True)
 
         # Track history
         history.append({
@@ -235,6 +241,9 @@ def run_baseline_agent(env, task_name: str, verbose: bool = True) -> Dict[str, A
             break
 
     avg_reward = total_reward / max(1, step)
+    
+    # Required [END] logging format for competition
+    print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}", flush=True)
 
     if verbose:
         print(f"\n  {'─'*40}")
@@ -260,6 +269,9 @@ def run_random_baseline(env, task_name: str, verbose: bool = True) -> Dict[str, 
     total_reward = 0.0
     step = 0
     history: List[Dict[str, Any]] = []
+    
+    # Required logging format for competition
+    print(f"[START] task={task_name}", flush=True)
 
     # Pre-defined deterministic actions per task
     HEURISTIC_ACTIONS = {
@@ -328,6 +340,9 @@ def run_random_baseline(env, task_name: str, verbose: bool = True) -> Dict[str, 
             "score": reward.score,
         })
 
+        # Required [STEP] logging format for competition
+        print(f"[STEP] step={step} action={action.action_type} reward={reward.score:.4f} done={done}", flush=True)
+
         if verbose:
             print(f"  Step {step}: {action.action_type} -> {reward.score:.3f}")
 
@@ -335,6 +350,9 @@ def run_random_baseline(env, task_name: str, verbose: bool = True) -> Dict[str, 
             break
 
     avg_reward = total_reward / max(1, step)
+    
+    # Required [END] logging format for competition
+    print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}", flush=True)
 
     if verbose:
         print(f"  Final: {step} steps | Avg: {avg_reward:.3f} | Total: {total_reward:.3f}")

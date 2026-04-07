@@ -5,6 +5,7 @@ LABEL org.opencontainers.image.title="OpenEnv Workflow Evaluation Environment"
 LABEL tags="openenv"
 
 WORKDIR /app
+ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies if needed
 RUN apt-get update && apt-get install -y --no-install-recommends \

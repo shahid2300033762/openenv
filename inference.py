@@ -121,7 +121,7 @@ def run_episode(env, task_name: str, client, model_name: str):
         history = []
 
         # Required [START] marker
-        print(f"[START] task={task_name}")
+        print(f"[START] task={task_name}", flush=True)
 
         while True:
             step += 1
@@ -136,7 +136,7 @@ def run_episode(env, task_name: str, client, model_name: str):
             except Exception as e:
                 print(f"API Error: {e}")
                 # Fallback to internal heuristic if API fails mid-task
-                print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step} status=error")
+                print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step} status=error", flush=True)
                 return run_random_baseline(env, task_name, verbose=False)
 
             result = env.step(action)
@@ -144,13 +144,13 @@ def run_episode(env, task_name: str, client, model_name: str):
             total_reward += result.reward.score
             
             # Required [STEP] marker with all details
-            print(f"[STEP] step={step} action={action.action_type} reward={result.reward.score:.4f} done={result.done}")
+            print(f"[STEP] step={step} action={action.action_type} reward={result.reward.score:.4f} done={result.done}", flush=True)
             
             if result.done or step >= 10:
                 break
 
         # Required [END] marker
-        print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}")
+        print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}", flush=True)
         return {"total_reward": total_reward, "steps": step}
 
     except Exception as e:
