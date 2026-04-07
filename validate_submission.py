@@ -212,7 +212,7 @@ def check_docker() -> bool:
     checks = [
         ("EXPOSE" in content, "Exposes port(s)"),
         ("uvicorn" in content or "fastapi" in content or "python" in content, "Has run command"),
-        ("requirements.txt" in content, "Installs requirements"),
+        ("requirements.txt" in content or "requirements-prod.txt" in content, "Installs requirements"),
     ]
     
     all_passed = all(print_check(passed, msg) for passed, msg in checks)

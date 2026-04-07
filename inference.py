@@ -109,12 +109,7 @@ def run_episode(env, task_name: str, client, model_name: str):
     # Fallback to internal heuristic if no client
     if not client:
         try:
-            result = run_random_baseline(env, task_name, verbose=False)
-            total_steps = result.get('total_steps', result.get('steps', 0))
-            total_reward = result.get('total_reward', result.get('avg_reward', 0))
-            # Marker handled inside run_random_baseline but logging here for double-safety
-            print(f"[END-SUMMARY] task={task_name} total_reward={total_reward:.4f} steps={total_steps}")
-            return result
+            return run_random_baseline(env, task_name, verbose=False)
         except Exception as e:
             print(f"CRITICAL: Baseline failed for {task_name}: {e}")
             return {"total_reward": 0.0, "steps": 0}
