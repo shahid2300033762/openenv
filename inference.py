@@ -33,17 +33,22 @@ def get_openai_client():
 
     api_base_url = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1/")
     model_name = os.environ.get("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.2")
-    hf_token = os.environ.get("HF_TOKEN") or os.environ.get("OPENAI_API_KEY")
+    hf_token = (os.environ.get("HF_TOKEN") or os.environ.get("OPENAI_API_KEY", "")).strip()
 
     if not hf_token:
-        print("WARNING: HF_TOKEN (or OPENAI_API_KEY) not set. Falling back to heuristic agent.")
+        print("WARNING: HF_TOKEN (or OPENAI_API_KEY) not set or empty. Falling back to heuristic agent.")
         return None, model_name
 
-    client = OpenAI(
-        base_url=api_base_url,
-        api_key=hf_token
-    )
-    return client, model_name
+    try:
+        client = OpenAI(
+            base_url=api_base_url,
+            api_key=hf_token
+        )
+        return client, model_name
+    except Exception as e:
+        print(f"CRITICAL: Failed to initialize OpenAI client: {e}")
+        print("Falling back to heuristic agent.")
+        return None, model_name
 
 
 def build_prompt(
@@ -98,19 +103,26 @@ def parse_response(text: str, default_action: str) -> Action:
 
 
 def run_episode(env, task_name: str, client, model_name: str):
-    """Run a single episode from start to finish."""
+    """Run a single episode from start to finish with required logging format."""
     from baseline.agent import run_random_baseline
     
     # Fallback to internal heuristic if no client
     if not client:
-        return run_random_baseline(env, task_name, verbose=False)
+        result = run_random_baseline(env, task_name, verbose=False)
+        # Add proper logging format for heuristic baseline
+        total_steps = result.get('total_steps', result.get('steps', 0))
+        total_reward = result.get('total_reward', result.get('avg_reward', 0))
+        print(f"[START] task={task_name}")
+        print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={total_steps}")
+        return result
     
     obs = env.reset()
     total_reward = 0.0
     step = 0
     history = []
 
-    print(f"\n--- Running Task: {task_name} ---")
+    # Required [START] marker
+    print(f"[START] task={task_name}")
 
     while True:
         step += 1
@@ -125,17 +137,22 @@ def run_episode(env, task_name: str, client, model_name: str):
         except Exception as e:
             print(f"API Error: {e}")
             # Fallback to internal heuristic if API fails mid-task
+            print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step} status=error")
             return run_random_baseline(env, task_name, verbose=False)
 
         result = env.step(action)
         obs = result.observation
         total_reward += result.reward.score
         
-        print(f"Step {step}: {action.action_type} | Reward: {result.reward.score:.2f}")
+        # Required [STEP] marker with all details
+        print(f"[STEP] step={step} action={action.action_type} reward={result.reward.score:.4f} done={result.done}")
         
         if result.done or step >= 10:
             break
 
+    # Required [END] marker
+    print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}")
+    
     return {"total_reward": total_reward, "steps": step}
 
 
