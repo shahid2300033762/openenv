@@ -188,6 +188,7 @@ def main():
     ]
 
     # 3. Main Loop with Isolation
+    all_trace_results = []
     for name, class_path in task_configs:
         try:
             module_name, class_name = class_path.rsplit(".", 1)
@@ -195,10 +196,36 @@ def main():
             env_class = getattr(module, class_name)
             env = env_class()
             
-            results[name] = run_episode(env, name, client, model_name)
+            res = run_episode(env, name, client, model_name)
+            results[name] = res
+            
+            # For JSON reporting, normalize keys
+            json_res = {
+                "task_name": name,
+                "total_steps": res.get("steps", res.get("total_steps", 0)),
+                "total_reward": res.get("total_reward", res.get("avg_reward", 0)),
+                "trace": res.get("trace", [])
+            }
+            all_trace_results.append(json_res)
         except Exception as e:
             print(f"CRITICAL ERROR: Failed to execute task '{name}': {e}")
             results[name] = {"total_reward": 0.0, "steps": 0}
+
+    # 3.5 Save results to JSON for validator
+    try:
+        output_data = {
+            "config": {
+                "api_base_url": os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1/"),
+                "model_name": model_name,
+                "has_api_key": client is not None
+            },
+            "results": all_trace_results
+        }
+        with open("inference_results.json", "w") as f:
+            json.dump(output_data, f, indent=2)
+        print("\n[INFO] Results saved to inference_results.json")
+    except Exception as e:
+        print(f"WARNING: Failed to save inference_results.json: {e}")
 
     # 4. Final Reporting
     try:

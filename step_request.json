@@ -1,0 +1,9 @@
+{
+  "session_id": "e1de583b-702a-4df3-add5-2028b7162336",
+  "action": {
+    "value": "complaint",
+    "action_type": "classify",
+    "target": "email",
+    "reasoning": "Customer is frustrated about duplicate billing"
+  }
+}
