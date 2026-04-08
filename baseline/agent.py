@@ -20,25 +20,16 @@ def _get_openai_client():
     """Lazy-load OpenAI client with competition-required environment variables."""
     try:
         from openai import OpenAI  # type: ignore
-        from dotenv import load_dotenv  # type: ignore
-        load_dotenv(override=True)
     except ImportError:
-        raise ImportError("openai and python-dotenv not found.")
+        raise ImportError("openai not found.")
 
-    api_key = (
-        os.environ.get("API_KEY") or 
-        os.environ.get("OPENAI_API_KEY", "")
-    ).strip()
-    
-    base_url = os.environ.get("API_BASE_URL")
-
-    if not api_key:
-        raise ValueError("Neither API_KEY nor OPENAI_API_KEY is set.")
-    
-    if not base_url:
-        raise ValueError("API_BASE_URL must be set for competition evaluation.")
-
-    return OpenAI(api_key=api_key, base_url=base_url)
+    # Strict environment variable check for competition
+    try:
+        api_key = os.environ["API_KEY"]
+        base_url = os.environ["API_BASE_URL"]
+        return OpenAI(api_key=api_key, base_url=base_url)
+    except KeyError as e:
+        raise ValueError(f"Environment variable {e} must be set for competition evaluation.")
 
 
 def build_prompt(
@@ -186,7 +177,7 @@ def run_baseline_agent(env, task_name: str, verbose: bool = True) -> Dict[str, A
         # Call OpenAI API
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=os.environ.get("MODEL_NAME", "gpt-4o-mini"),
                 messages=[
                     {
                         "role": "system",

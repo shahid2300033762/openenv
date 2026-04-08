@@ -19,42 +19,27 @@ def get_openai_client():
     """Configure OpenAI client with competition-required environment variables."""
     try:
         from openai import OpenAI
-        from dotenv import load_dotenv
-        load_dotenv()
     except ImportError:
-        print("Missing dependencies. Install: pip install openai python-dotenv")
-        return None, "mistralai/Mistral-7B-Instruct-v0.2"
+        print("Missing dependencies. Install: pip install openai")
+        return None, "gpt-4o-mini"
 
-    # API_BASE_URL is REQUIRED for competition evaluation
-    api_base_url = os.environ.get("API_BASE_URL")
-    if not api_base_url:
-        print("CRITICAL: API_BASE_URL not set. This is required for competition evaluation.")
-        print("Falling back to heuristic agent.")
-        return None, "mistralai/Mistral-7B-Instruct-v0.2"
-    
-    model_name = os.environ.get("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.2")
-    
-    # Prioritize API_KEY as required by the LiteLLM proxy in Phase 2
-    api_key = (
-        os.environ.get("API_KEY") or 
-        os.environ.get("HF_TOKEN") or 
-        os.environ.get("OPENAI_API_KEY", "")
-    ).strip()
-
-    if not api_key:
-        print("WARNING: API_KEY (HF_TOKEN / OPENAI_API_KEY) not set. Falling back to heuristic agent.")
-        return None, model_name
-
+    # API_BASE_URL and API_KEY are REQUIRED for competition evaluation
     try:
+        api_base_url = os.environ["API_BASE_URL"]
+        api_key = os.environ["API_KEY"]
+        model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
+        
         client = OpenAI(
             base_url=api_base_url,
             api_key=api_key
         )
         return client, model_name
+    except KeyError as e:
+        print(f"CRITICAL: Environment variable {e} is missing. This is required for competition evaluation.")
+        raise
     except Exception as e:
         print(f"CRITICAL: Failed to initialize OpenAI client: {e}")
-        print("Falling back to heuristic agent.")
-        return None, model_name
+        raise
 
 
 def build_prompt(
@@ -118,13 +103,10 @@ def run_episode(env, task_name: str, client, model_name: str):
         print(f"CRITICAL: Failed to import baseline agent. Task {task_name} aborted.")
         return {"total_reward": 0.0, "steps": 0}
         
-    # Fallback to internal heuristic if no client
+    # Competition evaluation REQUIRES a valid client.
+    # We no longer fall back to heuristic agent here to ensure valid API usage is tracked.
     if not client:
-        try:
-            return run_random_baseline(env, task_name, verbose=False)
-        except Exception as e:
-            print(f"CRITICAL: Baseline failed for {task_name}: {e}")
-            return {"total_reward": 0.0, "steps": 0}
+        raise ValueError("OpenAI client not initialized. Cannot run competition episode.")
     
     try:
         obs = env.reset()
@@ -146,10 +128,10 @@ def run_episode(env, task_name: str, client, model_name: str):
                 )
                 action = parse_response(response.choices[0].message.content, obs.available_actions[0])
             except Exception as e:
-                print(f"API Error: {e}")
-                # Fallback to internal heuristic if API fails mid-task
+                print(f"API Error during step {step}: {e}")
+                # We do NOT fall back mid-task to ensure all attempts use the proxy
                 print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step} status=error", flush=True)
-                return run_random_baseline(env, task_name, verbose=False)
+                raise
 
             result = env.step(action)
             obs = result.observation
@@ -184,12 +166,12 @@ def main():
 
     results = {}
     
-    # 1. Initialize Client safely
+    # 1. Initialize Client (strict)
     try:
         client, model_name = get_openai_client()
     except Exception as e:
-        print(f"CRITICAL: get_openai_client failed: {e}")
-        client, model_name = None, "mistralai/Mistral-7B-Instruct-v0.2"
+        print(f"CRITICAL: Failed to initialize competition environment: {e}")
+        sys.exit(1) # Fail loudly for competition validator
 
     # 2. Task Definitions
     task_configs = [
