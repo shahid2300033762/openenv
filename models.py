@@ -116,6 +116,17 @@ class RewardBreakdown(BaseModel):
     reasoning_quality: float = Field(0.0, ge=0.0, le=1.0)
     progress: float = Field(0.0, ge=0.0, le=1.0)
 
+    @field_validator("correctness", "reasoning_quality", "progress")
+    @classmethod
+    def strict_bounds(cls, v: float) -> float:
+        """Ensure all scores are strictly in (0, 1)."""
+        EPS = 0.001
+        if v <= 0.0:
+            return EPS
+        if v >= 1.0:
+            return 1.0 - EPS
+        return v
+
 
 class RewardPenalties(BaseModel):
     """Itemised penalties inside a Reward."""
@@ -124,6 +135,17 @@ class RewardPenalties(BaseModel):
     invalid_action_penalty: float = Field(0.0, ge=0.0)
     repetition_penalty: float = Field(0.0, ge=0.0)
     skip_penalty: float = Field(0.0, ge=0.0)
+
+    @field_validator("step_penalty", "invalid_action_penalty", "repetition_penalty", "skip_penalty")
+    @classmethod
+    def strict_bounds(cls, v: float) -> float:
+        """Ensure all penalty values are strictly in (0, 1)."""
+        EPS = 0.001
+        if v <= 0.0:
+            return EPS
+        if v >= 1.0:
+            return 1.0 - EPS
+        return v
 
 
 class Reward(BaseModel):
