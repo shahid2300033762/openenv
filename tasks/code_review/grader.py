@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Set
 
-from grading.utils import fuzzy_keyword_match, normalize_text, semantic_similarity, expand_with_synonyms
+from grading.utils import clamp_score, fuzzy_keyword_match, normalize_text, semantic_similarity, expand_with_synonyms
 
 
 def grade_issue_detection(
@@ -153,10 +153,10 @@ def grade_code_review(
     )
 
     return {
-        "detection_score": detection_score,
-        "fix_score": fix_score,
-        "quality_score": quality_score,
+        "detection_score": clamp_score(detection_score),
+        "fix_score": clamp_score(fix_score),
+        "quality_score": clamp_score(quality_score),
         "matched_issues": detection["matched_issues"],
         "missed_issues": detection["missed_issues"],
-        "total": round(total, 4),
+        "total": clamp_score(total),
     }

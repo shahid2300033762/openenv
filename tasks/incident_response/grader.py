@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from grading.utils import (
+    clamp_score,
     fuzzy_keyword_match,
     semantic_similarity,
     normalize_text
@@ -290,11 +291,11 @@ def grade_incident_response(
         overall = max(0.0, overall - time_penalty)
     
     return {
-        "detection_score": detection_score,
-        "analysis_score": analysis_score,
-        "containment_score": containment_score,
-        "remediation_score": remediation_score,
-        "documentation_score": documentation_score,
-        "overall_score": overall,
+        "detection_score": clamp_score(detection_score),
+        "analysis_score": clamp_score(analysis_score),
+        "containment_score": clamp_score(containment_score),
+        "remediation_score": clamp_score(remediation_score),
+        "documentation_score": clamp_score(documentation_score),
+        "overall_score": clamp_score(overall),
         "time_elapsed": time_elapsed
     }

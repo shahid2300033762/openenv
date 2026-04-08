@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from grading.utils import (
+    clamp_score,
     fuzzy_keyword_match,
     keyword_group_match,
     normalize_text,
@@ -141,8 +142,8 @@ def grade_email_triage(
     )
 
     return {
-        "classification_score": round(class_score, 4),
-        "priority_score": round(prio_score, 4),
-        "response_score": round(resp_score, 4),
-        "total": round(total, 4),
+        "classification_score": clamp_score(class_score),
+        "priority_score": clamp_score(prio_score),
+        "response_score": clamp_score(resp_score),
+        "total": clamp_score(total),
     }

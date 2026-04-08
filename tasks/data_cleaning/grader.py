@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+from grading.utils import clamp_score
 from tasks.data_cleaning.data import count_errors  # type: ignore
 
 
@@ -74,13 +75,13 @@ def grade_data_cleaning(
         - data_loss_penalty
         - new_error_penalty
     )
-    total = max(0.0, min(1.0, total))
+    total = clamp_score(total)
 
     return {
-        "missing_score": float(f"{missing_improvement:.4f}"),
-        "duplicates_score": float(f"{dup_improvement:.4f}"),
-        "format_score": float(f"{fmt_improvement:.4f}"),
+        "missing_score": clamp_score(missing_improvement),
+        "duplicates_score": clamp_score(dup_improvement),
+        "format_score": clamp_score(fmt_improvement),
         "data_loss_penalty": float(f"{data_loss_penalty:.4f}"),
         "new_error_penalty": float(f"{new_error_penalty:.4f}"),
-        "total": float(f"{total:.4f}"),
+        "total": total,
     }
