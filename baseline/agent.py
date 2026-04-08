@@ -351,7 +351,8 @@ def run_random_baseline(env, task_name: str, verbose: bool = True, suppress_mark
         })
 
         # Required [STEP] logging format for competition
-        print(f"[STEP] step={step} action={action.action_type} reward={reward.score:.4f} done={done}", flush=True)
+        if not suppress_markers:
+            print(f"[STEP] step={step} action={action.action_type} reward={reward.score:.4f} done={done}", flush=True)
 
         if verbose:
             print(f"  Step {step}: {action.action_type} -> {reward.score:.3f}")
@@ -362,7 +363,8 @@ def run_random_baseline(env, task_name: str, verbose: bool = True, suppress_mark
     avg_reward = total_reward / max(1, step)
     
     # Required [END] logging format for competition
-    print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}", flush=True)
+    if not suppress_markers:
+        print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}", flush=True)
 
     if verbose:
         print(f"  Final: {step} steps | Avg: {avg_reward:.3f} | Total: {total_reward:.3f}")
