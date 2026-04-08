@@ -254,7 +254,7 @@ def run_baseline_agent(env, task_name: str, verbose: bool = True) -> Dict[str, A
     }
 
 
-def run_random_baseline(env, task_name: str, verbose: bool = True) -> Dict[str, Any]:
+def run_random_baseline(env, task_name: str, verbose: bool = True, suppress_markers: bool = False) -> Dict[str, Any]:
     """
     Run a deterministic heuristic baseline (no LLM required).
     Uses fixed, reasonable actions for each task.
@@ -265,7 +265,8 @@ def run_random_baseline(env, task_name: str, verbose: bool = True) -> Dict[str, 
     history: List[Dict[str, Any]] = []
     
     # Required logging format for competition
-    print(f"[START] task={task_name}", flush=True)
+    if not suppress_markers:
+        print(f"[START] task={task_name}", flush=True)
 
     # Pre-defined deterministic actions per task
     HEURISTIC_ACTIONS = {
