@@ -85,7 +85,7 @@ def grade_response_quality(
         return clamp_score(0.0)
 
     resp_lower = normalize_text(response)
-    score = 0.0
+    score = 0.001
 
     # 1) Acknowledgment — does it reference the customer's issue? (0.35)
     if expected_keywords:

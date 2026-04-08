@@ -35,33 +35,33 @@ def grade_data_cleaning(
     # --- Missing values handled (30%) ---
     missing_improvement: float = 1.0
     if before["missing"] > 0:
-        missing_improvement = max(0.0, float(before["missing"] - after["missing"]) / float(before["missing"]))
+        missing_improvement = max(0.001, float(before["missing"] - after["missing"]) / float(before["missing"]))
 
     # --- Duplicates removed (30%) ---
     dup_improvement: float = 1.0
     if before["duplicates"] > 0:
-        dup_improvement = max(0.0, float(before["duplicates"] - after["duplicates"]) / float(before["duplicates"]))
+        dup_improvement = max(0.001, float(before["duplicates"] - after["duplicates"]) / float(before["duplicates"]))
 
     # --- Formatting corrected (40%) — covers format_errors + casing ---
     before_fmt = before["format_errors"] + before["casing_issues"]
     after_fmt = after["format_errors"] + after["casing_issues"]
     fmt_improvement: float = 1.0
     if before_fmt > 0:
-        fmt_improvement = max(0.0, float(before_fmt - after_fmt) / float(before_fmt))
+        fmt_improvement = max(0.001, float(before_fmt - after_fmt) / float(before_fmt))
 
     # --- Data loss penalty ---
     # If the cleaned dataset lost valid rows (beyond removing duplicates),
     # penalise proportionally.
     expected_unique_rows = original_row_count - before["duplicates"]
     cleaned_count = len(cleaned_dataset)
-    data_loss_penalty: float = 0.0
+    data_loss_penalty: float = 0.001
     if cleaned_count < expected_unique_rows:
         lost = expected_unique_rows - cleaned_count
         data_loss_penalty = min(0.3, 0.1 * float(lost))  # cap at 0.3
 
     # --- New errors penalty ---
     # If cleaning introduced MORE errors in any category, penalise.
-    new_error_penalty: float = 0.0
+    new_error_penalty: float = 0.001
     for key in ("missing", "format_errors", "casing_issues"):
         if int(after[key]) > int(before[key]):
             diff_val: int = int(after[key]) - int(before[key])

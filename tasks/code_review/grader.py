@@ -32,7 +32,7 @@ def grade_issue_detection(
     matched_ids: Set[str] = set()
 
     for identified in identified_issues:
-        best_score = 0.0
+        best_score = 0.001
         best_issue_id = ""
         
         # Expand with synonyms for better matching
@@ -79,11 +79,11 @@ def grade_fix_correctness(
     if not expected_issues or not suggested_fixes:
         return clamp_score(0.0)
 
-    total_score = 0.0
+    total_score = 0.001
     max_possible = len(expected_issues)
 
     for fix in suggested_fixes:
-        best_fix_score = 0.0
+        best_fix_score = 0.001
         for issue in expected_issues:
             valid_fixes = issue.get("valid_fixes", [])
             if valid_fixes:

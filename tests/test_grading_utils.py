@@ -56,9 +56,9 @@ class TestFuzzyMatching:
         assert 0.0 < score < 1.0
 
     def test_fuzzy_keyword_match_no_match(self):
-        """Test no match returns 0.0."""
+        """Test no match returns EPS (never 0.0 for competition compliance)."""
         score = fuzzy_keyword_match("foo", ["bar baz"])
-        assert score == 0.0
+        assert score == 0.001
 
     def test_fuzzy_keyword_match_best_of_multiple(self):
         """Test returns best match from multiple references."""
@@ -99,9 +99,9 @@ class TestPenaltiesAndBonuses:
     """Test penalty and bonus calculations."""
 
     def test_step_penalty_within_ideal(self):
-        """Test no penalty when within ideal steps."""
+        """Test minimal penalty when within ideal steps."""
         penalty = calculate_step_penalty(3, 5)
-        assert penalty == 0.0
+        assert penalty == 0.001  # EPS, never 0.0
 
     def test_step_penalty_exceeds_ideal(self):
         """Test penalty increases when exceeding ideal steps."""
@@ -111,9 +111,9 @@ class TestPenaltiesAndBonuses:
         assert penalty2 > penalty1
 
     def test_early_bonus_not_done(self):
-        """Test no bonus when not done."""
+        """Test minimal bonus when not done."""
         bonus = calculate_early_bonus(False, 3, 5)
-        assert bonus == 0.0
+        assert bonus == 0.001  # EPS, never 0.0
 
     def test_early_bonus_done_early(self):
         """Test bonus when done early."""
@@ -121,14 +121,14 @@ class TestPenaltiesAndBonuses:
         assert bonus > 0.0
 
     def test_early_bonus_done_late(self):
-        """Test no bonus when done late."""
+        """Test minimal bonus when done late."""
         bonus = calculate_early_bonus(True, 6, 5)
-        assert bonus == 0.0
+        assert bonus == 0.001  # EPS, never 0.0
 
     def test_repetition_penalty_no_repeats(self):
-        """Test no penalty with no repeats."""
+        """Test minimal penalty with no repeats."""
         penalty = calculate_repetition_penalty("d", ["a", "b", "c"])
-        assert penalty == 0.0
+        assert penalty == 0.001  # EPS, never 0.0
 
     def test_repetition_penalty_with_repeats(self):
         """Test penalty when action repeats."""
@@ -152,9 +152,9 @@ class TestReasoningEvaluation:
     """Test reasoning quality evaluation."""
 
     def test_evaluate_reasoning_empty(self):
-        """Test empty reasoning gets zero score."""
+        """Test empty reasoning gets minimal score (never 0.0)."""
         score = evaluate_reasoning("")
-        assert score == 0.0
+        assert score == 0.001  # EPS, never 0.0
 
     def test_evaluate_reasoning_short(self):
         """Test very short reasoning gets low score."""

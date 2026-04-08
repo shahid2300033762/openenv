@@ -27,21 +27,22 @@ def token_set(text: str) -> Set[str]:
 def fuzzy_keyword_match(candidate: str, references: List[str]) -> float:
     """
     Token-overlap similarity between candidate and the best-matching reference.
-    Returns 0.0 – 1.0.  Deterministic.
+    Returns EPS – 1.0.  Deterministic.
     """
+    EPS = 0.001
     if not references:
-        return 0.0
+        return EPS
     cand_tokens = token_set(candidate)
     if not cand_tokens:
-        return 0.0
-    best = 0.0
+        return EPS
+    best = EPS
     for ref in references:
         ref_tokens = token_set(ref)
         if not ref_tokens:
             continue
         overlap = len(cand_tokens & ref_tokens)
         union = len(cand_tokens | ref_tokens)
-        score = overlap / union if union else 0.0
+        score = overlap / union if union else EPS
         best = max(best, score)
     return best
 
@@ -61,7 +62,7 @@ def semantic_similarity(text_a: str, text_b: str) -> float:
     a_bg = bigrams(text_a) | token_set(text_a)
     b_bg = bigrams(text_b) | token_set(text_b)
     if not a_bg or not b_bg:
-        return 0.0
+        return 0.001
     return len(a_bg & b_bg) / len(a_bg | b_bg)
 
 
@@ -72,7 +73,7 @@ def keyword_group_match(text: str, keyword_groups: Dict[str, List[str]]) -> str:
     """
     text_tokens = token_set(text)
     best_group = ""
-    best_score = 0.0
+    best_score = 0.001
     for group_name, keywords in keyword_groups.items():
         kw_tokens = set()
         for kw in keywords:
@@ -111,25 +112,25 @@ def expand_with_synonyms(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 def calculate_step_penalty(current_step: int, ideal_steps: int) -> float:
-    """Penalise exceeding ideal_steps.  Returns >= 0."""
+    """Penalise exceeding ideal_steps.  Returns >= 0.001."""
     if ideal_steps <= 0:
-        return 0.0
+        return 0.001
     ratio = current_step / ideal_steps
-    return max(0.0, 0.05 * (ratio - 1.0))
+    return max(0.001, 0.05 * (ratio - 1.0))
 
 
 def calculate_early_bonus(done: bool, current_step: int, ideal_steps: int) -> float:
     """Bonus for finishing before ideal_steps."""
     if done and current_step < ideal_steps:
         return 0.1
-    return 0.0
+    return 0.001
 
 
 def calculate_repetition_penalty(
     action_key: str, history: List[str]
 ) -> float:
-    """Return 0.1 if action_key already in history, else 0."""
-    return 0.1 if action_key in history else 0.0
+    """Return 0.1 if action_key already in history, else 0.001."""
+    return 0.1 if action_key in history else 0.001
 
 
 def evaluate_reasoning(reasoning: str) -> float:
@@ -139,9 +140,9 @@ def evaluate_reasoning(reasoning: str) -> float:
     Deterministic.
     """
     if not reasoning or not reasoning.strip():
-        return 0.0
+        return 0.001
     text = reasoning.strip()
-    score = 0.0
+    score = 0.001
     
     # Length reward: up to 0.04 for ≥ 50 words
     word_count = len(text.split())

@@ -208,7 +208,7 @@ def grade_documentation(
     report_norm = normalize_text(report)
     word_count = len(report.split())
     
-    score = 0.0
+    score = 0.001
     
     # Length check (minimum substance required)
     if word_count < 20:

@@ -228,16 +228,16 @@ class BaseEnvironment(ABC):
     def _check_phase_skip(self, action_type: str) -> float:
         """
         Penalise skipping a required workflow phase OR going backwards.
-        Returns penalty amount.
+        Returns penalty amount (>= 0.001, never 0.0).
         """
         phases = self._get_phase_order()
         if not phases:
-            return 0.0
+            return 0.001
         
         # Find expected phase
         expected_idx = len(self._completed_phases)
         if expected_idx >= len(phases):
-            return 0.0
+            return 0.001
         expected_phase = phases[expected_idx]
         
         # If the action matches a later phase, it's a skip (forward jump)
@@ -248,7 +248,7 @@ class BaseEnvironment(ABC):
             # NEW: Penalize going backwards to completed phases
             if action_type in self._completed_phases:
                 return 0.10  # Backward movement penalty
-        return 0.0
+        return 0.001
 
     def _advance_phase(self, action_type: str) -> None:
         """
