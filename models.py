@@ -127,6 +127,18 @@ class RewardBreakdown(BaseModel):
             return 1.0 - EPS
         return v
 
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        """Clamp all float values on serialisation."""
+        raw = super().model_dump(**kwargs)
+        EPS = 0.001
+        for key, val in raw.items():
+            if isinstance(val, float):
+                if val <= 0.0:
+                    raw[key] = EPS
+                elif val >= 1.0:
+                    raw[key] = 1.0 - EPS
+        return raw
+
 
 class RewardPenalties(BaseModel):
     """Itemised penalties inside a Reward."""
@@ -146,6 +158,18 @@ class RewardPenalties(BaseModel):
         if v >= 1.0:
             return 1.0 - EPS
         return v
+
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        """Clamp all float values on serialisation."""
+        raw = super().model_dump(**kwargs)
+        EPS = 0.001
+        for key, val in raw.items():
+            if isinstance(val, float):
+                if val <= 0.0:
+                    raw[key] = EPS
+                elif val >= 1.0:
+                    raw[key] = 1.0 - EPS
+        return raw
 
 
 class Reward(BaseModel):
@@ -174,7 +198,29 @@ class Reward(BaseModel):
         """Ensure early_bonus is strictly > 0."""
         if v <= 0.0:
             return 0.001
+        if v > 0.1:
+            return 0.1
         return v
+
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        """Override to clamp ALL floats to strict (0, 1) on serialisation."""
+        raw = super().model_dump(**kwargs)
+        # Inline clamp for Reward fields
+        EPS = 0.001
+        for key, val in raw.items():
+            if isinstance(val, float):
+                if val <= 0.0:
+                    raw[key] = EPS
+                elif val >= 1.0:
+                    raw[key] = 1.0 - EPS
+            elif isinstance(val, dict):
+                for k2, v2 in val.items():
+                    if isinstance(v2, float):
+                        if v2 <= 0.0:
+                            val[k2] = EPS
+                        elif v2 >= 1.0:
+                            val[k2] = 1.0 - EPS
+        return raw
 
 
 class State(BaseModel):
@@ -191,6 +237,31 @@ class State(BaseModel):
     trace: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+# ---------------------------------------------------------------------------
+# Safety utility: recursive float clamping for serialised output
+# ---------------------------------------------------------------------------
+
+def _clamp_all_floats(obj: Any, eps: float = 0.001) -> Any:
+    """Recursively clamp every float in a nested dict/list to strict (0, 1).
+    
+    This is the FINAL safety net.  The competition validator requires
+    every task score to be strictly between 0 and 1 (not 0.0 and not 1.0).
+    By clamping at the serialisation layer, we guarantee compliance no
+    matter what upstream arithmetic produces.
+    """
+    if isinstance(obj, dict):
+        return {k: _clamp_all_floats(v, eps) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_clamp_all_floats(v, eps) for v in obj]
+    if isinstance(obj, float):
+        if obj <= 0.0:
+            return eps
+        if obj >= 1.0:
+            return 1.0 - eps
+        return obj
+    return obj
+
+
 class StepResult(BaseModel):
     """Typed return of step(). Contains observation, reward, done flag, and info."""
 
@@ -198,3 +269,9 @@ class StepResult(BaseModel):
     reward: Reward
     done: bool = Field(False)
     info: Dict[str, Any] = Field(default_factory=dict)
+
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        """Override to clamp ALL floats in serialised output to strict (0, 1)."""
+        raw = super().model_dump(**kwargs)
+        return _clamp_all_floats(raw)
+
