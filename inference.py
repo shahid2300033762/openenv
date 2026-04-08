@@ -174,7 +174,9 @@ def run_episode(env, task_name: str, client, model_name: str):
     """
     print(f"[START] task={task_name}", flush=True)
 
-    res = {"total_reward": 0.0, "steps": 0, "trace": [], "error": None}
+    # Use EPS to ensure scores are strictly in (0, 1)
+    EPS = 0.001
+    res = {"total_reward": EPS, "steps": 0, "trace": [], "error": None}
 
     try:
         obs = env.reset()
@@ -183,7 +185,7 @@ def run_episode(env, task_name: str, client, model_name: str):
         res["error"] = f"reset failed: {e}"
         return res
 
-    total_reward = 0.0
+    total_reward = EPS
     step = 0
     history = []
 
@@ -221,11 +223,16 @@ def run_episode(env, task_name: str, client, model_name: str):
             print(f"[ERROR] env.step() failed at step {step}: {e}", flush=True)
             break
 
-        # Log step
+        # Log step - clamp score to strict (0, 1)
         try:
             reward_score = result.reward.score
+            # Ensure strict bounds
+            if reward_score <= 0.0:
+                reward_score = EPS
+            elif reward_score >= 1.0:
+                reward_score = 1.0 - EPS
         except Exception:
-            reward_score = 0.0
+            reward_score = EPS
 
         print(f"[STEP] step={step} action={action.action_type} reward={reward_score:.4f} done={result.done}", flush=True)
 
@@ -238,6 +245,12 @@ def run_episode(env, task_name: str, client, model_name: str):
         total_reward = reward_score
         if result.done:
             break
+
+    # Ensure final total_reward is strictly in (0, 1)
+    if total_reward <= 0.0:
+        total_reward = EPS
+    elif total_reward >= 1.0:
+        total_reward = 1.0 - EPS
 
     res["total_reward"] = total_reward
     res["steps"] = step
@@ -283,7 +296,7 @@ def main():
                 print(f"[ERROR] Task '{name}' failed entirely: {e}", flush=True)
                 traceback.print_exc()
                 res = {
-                    "total_reward": 0.0,
+                    "total_reward": 0.001,  # Strict (0, 1) - use EPS
                     "steps": 0,
                     "trace": [],
                     "error": str(e)
