@@ -1,128 +1,206 @@
-# 🚀 Deployment Status - Auto-Redirect to Swagger UI
+# ✅ DEPLOYMENT COMPLETE - Phase 2 Fix
 
-## ✅ What We Changed
+**Deployment Time**: 2026-04-07 17:57 UTC
 
-**Made the root URL (/) automatically redirect to /docs**
+## What Was Done
 
-Before: Opening https://shahid21-openenv.hf.space/ showed JSON `{"status":"ok","version":"1.0.0"}`
+### GitHub ✅ DEPLOYED
+- **Commit**: `6d28434`
+- **URL**: https://github.com/shahid2300033762/openenv
+- **Status**: ✅ Pushed successfully
 
-After: Opening https://shahid21-openenv.hf.space/ automatically redirects to the **Swagger UI** at `/docs`
-
-## 📋 Current Status
-
-**Code Changes:** ✅ Complete and Pushed
-- Modified `server/app.py` to redirect root to `/docs`
-- Committed and pushed to both GitHub and HuggingFace Space
-- Latest commit: `8ee9398 - Redirect root (/) to /docs for immediate API testing`
-
-**HuggingFace Space:** ⏳ Rebuilding
-- The Space needs to rebuild to apply the changes
-- This typically takes 2-10 minutes
-- You can check status at: https://huggingface.co/spaces/shahid21/openenv
-
-## 🎯 What Recruiters Will See (Once Rebuild Completes)
-
-1. **Open the Space:** https://huggingface.co/spaces/shahid21/openenv
-2. **Click "App" button** (top right)
-3. **BOOM! Swagger UI appears immediately** 🎉
-   - Shows all endpoints: POST /reset, POST /step, GET /state, GET /health
-   - Has "Try it out" buttons ready to test
-   - Full interactive API documentation
-
-No clicking links, no searching - **instant API testing!**
-
-## 🧪 How to Verify It's Working
-
-Run this command to check if redirect is live:
-
-```powershell
-$response = Invoke-WebRequest -Uri "https://shahid21-openenv.hf.space/" -MaximumRedirection 0 -ErrorAction SilentlyContinue
-if ($response.StatusCode -eq 307) {
-    Write-Host "✅ Redirect is working!"
-} else {
-    Write-Host "⏳ Still rebuilding..."
-}
-```
-
-Or simply open in browser: https://shahid21-openenv.hf.space/
-
-## 📊 Technical Details
-
-**Change Made:**
-```python
-# Old code (HTML page)
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    return HTMLResponse(content=html_content)
-
-# New code (Redirect)
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/docs")
-```
-
-**HTTP Status:** 307 Temporary Redirect  
-**Target:** `/docs` (Swagger UI)
-
-## 🔗 Links
-
-| Link | What It Shows |
-|------|---------------|
-| https://shahid21-openenv.hf.space/ | **Redirects to /docs** (Swagger UI) |
-| https://shahid21-openenv.hf.space/docs | Swagger UI (direct) |
-| https://shahid21-openenv.hf.space/redoc | ReDoc UI (alternative) |
-| https://shahid21-openenv.hf.space/health | Health check JSON |
-| https://huggingface.co/spaces/shahid21/openenv | Space page with README |
-
-## ⏰ Rebuild Timeline
-
-- **Pushed:** 2026-04-03 ~15:23 UTC
-- **Expected completion:** 2-10 minutes after push
-- **Check status:** Look for "Running" status (green) on Space page
-
-## ✨ Why This Is Perfect for Recruiters
-
-**Before:** Recruiters had to:
-1. Open Space
-2. Read README
-3. Find the /docs link
-4. Click the link
-5. Then see the API
-
-**After:** Recruiters just:
-1. Open Space
-2. Click "App"
-3. **BAM! Swagger UI is there!** 🎉
-
-Zero friction = More impressive demo!
-
-## 🎥 What to Say to Recruiters
-
-**Option 1 (Simple):**
-```
-Try my API here: https://shahid21-openenv.hf.space/
-It opens directly to interactive docs - just click "POST /reset" to test!
-```
-
-**Option 2 (Detailed):**
-```
-I've deployed a production API with automatic redirect to Swagger UI:
-https://shahid21-openenv.hf.space/
-
-When you open it, you'll see interactive documentation where you can
-test POST /reset and POST /step endpoints with real-time responses.
-No setup needed - just click and test!
-```
-
-## 🎊 Next Steps
-
-1. **Wait for rebuild** (check Space page for "Running" status)
-2. **Test it:** Open https://shahid21-openenv.hf.space/ in browser
-3. **Verify redirect:** Should see Swagger UI immediately
-4. **Share with recruiters:** Use the links above!
+### Hugging Face Space ✅ DEPLOYED
+- **Commit**: `3c6b4e6`
+- **URL**: https://huggingface.co/spaces/shahid21/openenv
+- **Status**: ✅ Pushed successfully - **REBUILDING NOW**
 
 ---
 
-**Status as of now:** ✅ Code deployed, ⏳ Space rebuilding
+## 🔍 The Fix
 
-**ETA:** Should be live within 5-10 minutes of push time.
+**Problem**: Submission #14 failed Phase 2 - Code bypassed competition's LiteLLM proxy
+
+**Root Cause**: `API_BASE_URL` was optional, allowing fallback to default OpenAI endpoint
+
+**Solution**: Made `API_BASE_URL` mandatory in both files
+
+### Files Changed
+
+#### 1. `baseline/agent.py` (lines 38-41)
+```python
+# BEFORE
+return OpenAI(api_key=api_key)  # ❌ No base_url parameter!
+
+# AFTER  
+if not base_url:
+    raise ValueError("API_BASE_URL must be set for competition evaluation.")
+return OpenAI(api_key=api_key, base_url=base_url)  # ✅ Uses competition proxy!
+```
+
+#### 2. `inference.py` (lines 29-33)
+```python
+# BEFORE
+api_base_url = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1/")
+# ❌ Had default fallback URL!
+
+# AFTER
+api_base_url = os.environ.get("API_BASE_URL")
+if not api_base_url:
+    print("CRITICAL: API_BASE_URL not set. Required for competition evaluation.")
+    return None, model_name
+# ✅ No fallback - must use competition proxy!
+```
+
+#### 3. `.env.example`
+- Updated documentation to clarify API_BASE_URL is mandatory
+
+---
+
+## ⏳ NEXT STEPS
+
+### 1. Monitor HF Space Rebuild (DO THIS NOW)
+🔗 **Visit**: https://huggingface.co/spaces/shahid21/openenv
+
+**What to check:**
+- Click the **"Logs"** tab to watch build progress
+- Status should change from "Building" → "Running"
+- Build typically takes ~2-3 minutes
+
+### 2. Test the Deployment
+Once status shows **"Running"**:
+
+**Quick test in browser:**
+```
+https://shahid21-openenv.hf.space/health
+```
+
+**Or via command line:**
+```bash
+curl https://shahid21-openenv.hf.space/health
+
+# Expected response:
+{"status": "healthy", "tasks": [...]}
+```
+
+### 3. Resubmit to Competition
+**Go to**: Meta PyTorch Hackathon submission portal
+
+**Submit with**:
+```
+GitHub Repository: https://github.com/shahid2300033762/openenv
+HF Space URL: https://huggingface.co/spaces/shahid21/openenv
+```
+
+---
+
+## 🎯 Expected Phase 2 Result
+
+### Before (Submission #14)
+```
+❌ No API calls were made through our LLM proxy
+   Validator detected: last_active not updated
+   Reason: Code ignored API_BASE_URL and used default OpenAI endpoint
+```
+
+### After (Submission #15 - This Fix)
+```
+✅ API calls detected through LiteLLM proxy
+✅ last_active timestamp updated  
+✅ API_BASE_URL properly configured
+✅ Environment variables correctly read
+
+PHASE 2: PASSED ✅
+```
+
+---
+
+## 📊 Impact Summary
+
+| Check | Before (#14) | After (#15) |
+|-------|-------------|-------------|
+| Uses API_BASE_URL | ❌ Optional/Ignored | ✅ **Required** |
+| API calls via proxy | ❌ No | ✅ **Yes** |
+| Proxy last_active | ❌ Not updated | ✅ **Updated** |
+| Phase 2 status | ❌ **FAILED** | ✅ **Should PASS** |
+
+---
+
+## 📁 Complete Change Log
+
+| File | GitHub Commit | HF Space Commit | Description |
+|------|---------------|-----------------|-------------|
+| `baseline/agent.py` | 6d28434 | 3c6b4e6 | Added API_BASE_URL validation (line 38-41) |
+| `inference.py` | 6d28434 | 3c6b4e6 | Removed default URL, added validation (line 29-33) |
+| `.env.example` | 6d28434 | 3c6b4e6 | Updated documentation |
+
+---
+
+## ✅ Verification Checklist
+
+**Already Complete:**
+- [x] Fix implemented correctly
+- [x] Tests created and passed (`test_proxy_fix.py`)
+- [x] GitHub updated and pushed (commit 6d28434)
+- [x] HF Space updated and pushed (commit 3c6b4e6)
+
+**Waiting for You:**
+- [ ] HF Space rebuild complete → **Check now**: https://huggingface.co/spaces/shahid21/openenv
+- [ ] API health check passes → **Test**: https://shahid21-openenv.hf.space/health
+- [ ] Resubmit to competition → **Portal**: [Competition submission page]
+- [ ] Phase 2 validation passes → **Wait for results**
+
+---
+
+## 🐛 Troubleshooting
+
+### If HF Space build fails:
+1. Check the "Logs" tab for specific error messages
+2. Verify `requirements-prod.txt` has all dependencies
+3. Ensure `Dockerfile` is correct
+4. Check that all task modules are present
+
+### If Phase 2 still fails:
+1. Ensure HF Space status is **"Running"** (not Building/Sleeping)
+2. Test API manually: `curl https://shahid21-openenv.hf.space/health`
+3. Verify the fix is actually deployed:
+   ```bash
+   curl https://huggingface.co/spaces/shahid21/openenv/raw/main/inference.py | grep "API_BASE_URL"
+   # Should NOT show a default URL like "https://api-inference.huggingface.co"
+   ```
+4. Check validator logs carefully for the exact error
+
+### If you need to verify the fix locally:
+```bash
+cd C:\Users\kshah\Desktop\env
+python test_proxy_fix.py
+# Should show: ✅ ALL TESTS PASSED
+```
+
+---
+
+## 📚 Additional Documentation
+
+- **`PHASE2_FIX_SUMMARY.md`** - Detailed technical explanation
+- **`RESUBMISSION_CHECKLIST.md`** - Step-by-step checklist
+- **`test_proxy_fix.py`** - Automated validation tests
+- **`sync_to_hf.py`** - HF deployment helper script
+
+---
+
+## 🚀 Quick Reference
+
+**Your Links:**
+- GitHub: https://github.com/shahid2300033762/openenv
+- HF Space: https://huggingface.co/spaces/shahid21/openenv
+- API Health: https://shahid21-openenv.hf.space/health
+- API Docs: https://shahid21-openenv.hf.space/docs
+
+**Git Commits:**
+- GitHub: `6d28434` (Fix Phase 2: Require API_BASE_URL for LiteLLM proxy)
+- HF Space: `3c6b4e6` (Same commit message)
+
+**Status**: ✅ Code deployed to both platforms - Ready for resubmission after HF rebuild
+
+---
+
+**IMPORTANT**: Don't resubmit until HF Space shows "Running" status!

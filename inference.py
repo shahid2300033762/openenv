@@ -40,6 +40,7 @@ def get_openai_client():
 
     try:
         # Initialize client with timeout and max retries for proxy stability
+        # NOTE: This does NOT make a network call - just creates the client object
         client = OpenAI(
             base_url=api_base_url,
             api_key=api_key,
@@ -49,9 +50,12 @@ def get_openai_client():
         print(f"[OK] OpenAI client initialized successfully")
         print(f"  Base URL: {api_base_url}")
         print(f"  Model: {model_name}")
+        print(f"  Ready to make API calls through LiteLLM proxy")
         return client, model_name
     except Exception as e:
-        print(f"ERROR: Failed to initialize OpenAI client: {e}")
+        # This should rarely happen - initialization doesn't make network calls
+        print(f"ERROR: Failed to create OpenAI client object: {e}")
+        print("This usually means the openai library has a problem.")
         print("Will fall back to heuristic baseline agent.")
         return None, model_name
 
@@ -110,7 +114,12 @@ def parse_response(text: str, default_action: str):
 
 
 def run_episode(env, task_name: str, client, model_name: str):
-    """Run a single episode from start to finish with required logging format."""
+    """Run a single episode from start to finish with required logging format.
+    
+    CRITICAL: Always attempts to use the provided client and make API calls.
+    Only falls back to heuristic if API calls actually fail.
+    This ensures the competition's LiteLLM proxy is always attempted first.
+    """
     try:
         from baseline.agent import run_random_baseline
     except ImportError:
@@ -123,8 +132,9 @@ def run_episode(env, task_name: str, client, model_name: str):
     res = {"total_reward": 0.0, "steps": 0, "trace": []}
     
     try:
-        if not client:
-            raise ValueError("OpenAI client not initialized (missing API_BASE_URL or API_KEY).")
+        # CRITICAL: Do NOT check if client is None here!
+        # The validator provides credentials - we must ATTEMPT the API call.
+        # If client is None or API fails, the exception will be caught below.
         
         obs = env.reset()
         total_reward = 0.0
@@ -137,12 +147,24 @@ def run_episode(env, task_name: str, client, model_name: str):
             
             # Make API call with comprehensive error handling
             try:
+                # If client is None, this will raise ValueError
+                # That's INTENTIONAL - it triggers the fallback path below
+                if client is None:
+                    raise ValueError("Client is None - competition may not have provided API_BASE_URL")
+                
+                # Log that we're about to make an API call
+                print(f"  [API] Calling LiteLLM proxy for task={task_name} step={step}")
+                
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     timeout=60.0  # Per-request timeout
                 )
+                
+                # Log successful API response
+                print(f"  [API] ✓ Response received from proxy")
+                
                 action = parse_response(response.choices[0].message.content, obs.available_actions[0])
             except TimeoutError as e:
                 print(f"ERROR: API request timeout at step {step}: {e}")
