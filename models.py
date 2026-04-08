@@ -112,11 +112,11 @@ class Action(BaseModel):
 class RewardBreakdown(BaseModel):
     """Itemised score components inside a Reward."""
 
-    correctness: float = Field(0.0, ge=0.0, le=1.0)
-    reasoning_quality: float = Field(0.0, ge=0.0, le=1.0)
-    progress: float = Field(0.0, ge=0.0, le=1.0)
+    correctness: float = Field(0.0, description="Clamped to (0, 1)")
+    reasoning_quality: float = Field(0.0, description="Clamped to (0, 1)")
+    progress: float = Field(0.0, description="Clamped to (0, 1)")
 
-    @field_validator("correctness", "reasoning_quality", "progress")
+    @field_validator("correctness", "reasoning_quality", "progress", mode="before")
     @classmethod
     def strict_bounds(cls, v: float) -> float:
         """Ensure all scores are strictly in (0, 1)."""
@@ -131,12 +131,12 @@ class RewardBreakdown(BaseModel):
 class RewardPenalties(BaseModel):
     """Itemised penalties inside a Reward."""
 
-    step_penalty: float = Field(0.0, ge=0.0)
-    invalid_action_penalty: float = Field(0.0, ge=0.0)
-    repetition_penalty: float = Field(0.0, ge=0.0)
-    skip_penalty: float = Field(0.0, ge=0.0)
+    step_penalty: float = Field(0.0, description="Clamped to (0, 1)")
+    invalid_action_penalty: float = Field(0.0, description="Clamped to (0, 1)")
+    repetition_penalty: float = Field(0.0, description="Clamped to (0, 1)")
+    skip_penalty: float = Field(0.0, description="Clamped to (0, 1)")
 
-    @field_validator("step_penalty", "invalid_action_penalty", "repetition_penalty", "skip_penalty")
+    @field_validator("step_penalty", "invalid_action_penalty", "repetition_penalty", "skip_penalty", mode="before")
     @classmethod
     def strict_bounds(cls, v: float) -> float:
         """Ensure all penalty values are strictly in (0, 1)."""
@@ -151,13 +151,13 @@ class RewardPenalties(BaseModel):
 class Reward(BaseModel):
     """Dense reward returned at every step. Typed, never a raw dict."""
 
-    score: float = Field(..., ge=0.0, le=1.0, description="Final clamped score")
+    score: float = Field(..., description="Final clamped score - strictly in (0, 1)")
     feedback: str = Field("", description="Human-readable grader feedback")
     breakdown: RewardBreakdown = Field(default_factory=RewardBreakdown)
     penalties: RewardPenalties = Field(default_factory=RewardPenalties)
     early_bonus: float = Field(0.0, ge=0.0, le=0.1)
 
-    @field_validator("score")
+    @field_validator("score", mode="before")
     @classmethod
     def score_strict_bounds(cls, v: float) -> float:
         """Competition validator requires scores strictly in (0, 1)."""
