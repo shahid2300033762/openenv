@@ -26,17 +26,17 @@ from grading.utils import (
 def grade_detection(detected: Optional[str], ground_truth_type: str) -> float:
     """
     Score attack type detection.
-    Exact match = 1.0, related types get partial credit.
+    Exact match = near 1.0, related types get partial credit.
     """
     if not detected:
-        return 0.0
+        return clamp_score(0.0)
     
     det_norm = normalize_text(detected)
     gt_norm = normalize_text(ground_truth_type)
     
     # Exact match
     if det_norm == gt_norm:
-        return 1.0
+        return clamp_score(1.0)
     
     # Check for partial matches and synonyms
     attack_families = {
@@ -53,7 +53,7 @@ def grade_detection(detected: Optional[str], ground_truth_type: str) -> float:
     # Check if detected type contains any keywords
     for keyword in gt_keywords:
         if keyword in det_norm:
-            return 0.8
+            return clamp_score(0.8)
     
     # Fuzzy match as fallback
     all_keywords = []
@@ -61,7 +61,7 @@ def grade_detection(detected: Optional[str], ground_truth_type: str) -> float:
         all_keywords.extend(keywords)
     
     similarity = fuzzy_keyword_match(det_norm, all_keywords)
-    return max(0.0, similarity * 0.6)
+    return clamp_score(similarity * 0.6)
 
 
 def grade_indicators(
@@ -73,10 +73,10 @@ def grade_indicators(
     Rewards finding multiple correct indicators.
     """
     if not identified:
-        return 0.0
+        return clamp_score(0.0)
     
     if not ground_truth_indicators:
-        return 0.5  # Some credit for trying
+        return clamp_score(0.5)  # Some credit for trying
     
     matches = 0
     for gt_indicator in ground_truth_indicators:
@@ -96,7 +96,7 @@ def grade_indicators(
     if matches == len(ground_truth_indicators):
         recall += 0.1
     
-    return min(1.0, recall)
+    return clamp_score(recall)
 
 
 def grade_containment(
@@ -108,10 +108,10 @@ def grade_containment(
     Checks if critical actions are included.
     """
     if not actions:
-        return 0.0
+        return clamp_score(0.0)
     
     if not ground_truth_actions:
-        return 0.5
+        return clamp_score(0.5)
     
     # Critical actions (higher weight)
     critical_keywords = {
@@ -142,7 +142,7 @@ def grade_containment(
                                                if any(kw in normalize_text(a) for kw in critical_keywords)])) * 0.2 \
                       if any(kw in normalize_text(a) for kw in critical_keywords for a in ground_truth_actions) else 0
     
-    return min(1.0, base_score + critical_bonus)
+    return clamp_score(base_score + critical_bonus)
 
 
 def grade_remediation(
@@ -155,7 +155,7 @@ def grade_remediation(
     Looks for long-term fixes, not just immediate containment.
     """
     if not steps:
-        return 0.0
+        return clamp_score(0.0)
     
     # Remediation keywords (different from containment)
     remediation_keywords = {
@@ -190,7 +190,7 @@ def grade_remediation(
     
     quality_bonus = min(0.2, (remediation_quality / max(len(steps), 3)) * 0.2)
     
-    return min(1.0, match_score + quality_bonus)
+    return clamp_score(match_score + quality_bonus)
 
 
 def grade_documentation(
@@ -203,7 +203,7 @@ def grade_documentation(
     Checks for completeness and structure.
     """
     if not report or not report.strip():
-        return 0.0
+        return clamp_score(0.0)
     
     report_norm = normalize_text(report)
     word_count = len(report.split())
@@ -212,7 +212,7 @@ def grade_documentation(
     
     # Length check (minimum substance required)
     if word_count < 20:
-        return 0.1
+        return clamp_score(0.1)
     if word_count >= 50:
         score += 0.2
     elif word_count >= 30:
@@ -247,7 +247,7 @@ def grade_documentation(
     
     score += (technical_score / len(technical_terms)) * 0.3
     
-    return min(1.0, score)
+    return clamp_score(score)
 
 
 def grade_incident_response(

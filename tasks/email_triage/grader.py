@@ -26,13 +26,13 @@ from tasks.email_triage.data import CLASSIFICATION_KEYWORDS, PRIORITY_BY_CLASSIF
 def grade_classification(predicted: str, ground_truth: str) -> float:
     """
     Score classification accuracy.
-    Exact match = 1.0, same-family partial credit, else fuzzy match.
+    Exact match = near 1.0, same-family partial credit, else near 0.0.
     """
     pred = normalize_text(predicted)
     gt = normalize_text(ground_truth)
 
     if pred == gt:
-        return 1.0
+        return clamp_score(1.0)
 
     # Partial credit: complaint ↔ refund are related (0.4)
     related_pairs = {
@@ -42,30 +42,30 @@ def grade_classification(predicted: str, ground_truth: str) -> float:
     }
     pair = frozenset({pred, gt})
     if pair in related_pairs:
-        return related_pairs[pair]
+        return clamp_score(related_pairs[pair])
 
-    return 0.0
+    return clamp_score(0.0)
 
 
 def grade_priority(predicted: str, ground_truth: str) -> float:
     """
     Score priority correctness.
-    Exact = 1.0, one level off = 0.5, two+ levels off = 0.0.
+    Exact = near 1.0, one level off = 0.5, two+ levels off = near 0.0.
     """
     levels = {"critical": 4, "high": 3, "medium": 2, "low": 1}
     pred = normalize_text(predicted)
     gt = normalize_text(ground_truth)
 
     if pred == gt:
-        return 1.0
+        return clamp_score(1.0)
 
     pred_level = levels.get(pred, 0)
     gt_level = levels.get(gt, 0)
 
     diff = abs(pred_level - gt_level)
     if diff == 1:
-        return 0.5
-    return 0.0
+        return clamp_score(0.5)
+    return clamp_score(0.0)
 
 
 def grade_response_quality(
@@ -82,7 +82,7 @@ def grade_response_quality(
     Uses fuzzy keyword matching, not exact string comparison.
     """
     if not response or not response.strip():
-        return 0.0
+        return clamp_score(0.0)
 
     resp_lower = normalize_text(response)
     score = 0.0
@@ -112,9 +112,9 @@ def grade_response_quality(
     # Promotions shouldn't get a response — if classification is promotion
     # and agent correctly didn't write much, give full marks
     if classification == "promotion" and len(resp_lower.split()) < 10:
-        return 1.0
+        return clamp_score(1.0)
 
-    return min(1.0, score)
+    return clamp_score(score)
 
 
 def grade_email_triage(

@@ -81,7 +81,7 @@ def grade_data_cleaning(
         "missing_score": clamp_score(missing_improvement),
         "duplicates_score": clamp_score(dup_improvement),
         "format_score": clamp_score(fmt_improvement),
-        "data_loss_penalty": float(f"{data_loss_penalty:.4f}"),
-        "new_error_penalty": float(f"{new_error_penalty:.4f}"),
+        "data_loss_penalty": clamp_score(data_loss_penalty),
+        "new_error_penalty": clamp_score(new_error_penalty),
         "total": total,
     }

@@ -26,7 +26,7 @@ def grade_issue_detection(
     Uses fuzzy matching so exact wording isn't required.
     """
     if not expected_issues:
-        return {"detection_score": 1.0, "matched_issues": [], "missed_issues": []}
+        return {"detection_score": clamp_score(1.0), "matched_issues": [], "missed_issues": []}
 
     matched: List[str] = []
     matched_ids: Set[str] = set()
@@ -62,7 +62,7 @@ def grade_issue_detection(
     missed = [e["id"] for e in expected_issues if e["id"] not in matched_ids]
 
     return {
-        "detection_score": round(detection_rate, 4),
+        "detection_score": clamp_score(detection_rate),
         "matched_issues": matched,
         "missed_issues": missed,
     }
@@ -77,7 +77,7 @@ def grade_fix_correctness(
     Checks each fix against the valid_fixes list using fuzzy matching.
     """
     if not expected_issues or not suggested_fixes:
-        return 0.0
+        return clamp_score(0.0)
 
     total_score = 0.0
     max_possible = len(expected_issues)
@@ -92,7 +92,7 @@ def grade_fix_correctness(
         total_score += best_fix_score
 
     # Normalise by number of expected issues
-    return round(min(1.0, total_score / max_possible), 4)
+    return clamp_score(total_score / max_possible)
 
 
 def grade_code_quality(
@@ -104,7 +104,7 @@ def grade_code_quality(
     Rewards mentions of performance, readability, security, best practices.
     """
     if not suggestions:
-        return 0.0
+        return clamp_score(0.0)
 
     quality_keywords = [
         "performance", "complexity", "o(n)", "o(1)", "efficient",
@@ -128,7 +128,7 @@ def grade_code_quality(
                     score += 0.15
                     break
 
-    return round(min(1.0, score), 4)
+    return clamp_score(score)
 
 
 def grade_code_review(
