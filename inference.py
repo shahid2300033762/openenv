@@ -9,55 +9,32 @@ Uses the OpenAI client as required.
 import json
 import os
 import sys
+import time
 from typing import Any, Dict, List
 
 # Ensure project modules are importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Import models
+from models import Action
+
 
 def get_openai_client():
-    """Configure OpenAI client with competition-required environment variables."""
-    try:
-        from openai import OpenAI
-    except ImportError:
-        print("ERROR: Missing openai library. Install: pip install openai")
-        return None, "gpt-4o-mini"
-
-    # API_BASE_URL and API_KEY are REQUIRED for competition evaluation
-    api_base_url = os.environ.get("API_BASE_URL")
-    api_key = os.environ.get("API_KEY")
-    model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
-
-    if not api_base_url:
-        print("ERROR: API_BASE_URL environment variable is missing.")
-        print("Set it to the competition's LiteLLM proxy URL.")
-        return None, model_name
+    """
+    Get the OpenAI client configured for the competition's LiteLLM proxy.
+    """
+    from openai import OpenAI
+    api_base_url = os.environ["API_BASE_URL"]
+    api_key = os.environ["API_KEY"]
     
-    if not api_key:
-        print("ERROR: API_KEY environment variable is missing.")
-        print("Set it to your competition API key.")
-        return None, model_name
-
-    try:
-        # Initialize client with timeout and max retries for proxy stability
-        # NOTE: This does NOT make a network call - just creates the client object
-        client = OpenAI(
-            base_url=api_base_url,
-            api_key=api_key,
-            timeout=60.0,  # 60 second timeout for proxy requests
-            max_retries=3   # Retry up to 3 times on network errors
-        )
-        print(f"[OK] OpenAI client initialized successfully")
-        print(f"  Base URL: {api_base_url}")
-        print(f"  Model: {model_name}")
-        print(f"  Ready to make API calls through LiteLLM proxy")
-        return client, model_name
-    except Exception as e:
-        # This should rarely happen - initialization doesn't make network calls
-        print(f"ERROR: Failed to create OpenAI client object: {e}")
-        print("This usually means the openai library has a problem.")
-        print("Will fall back to heuristic baseline agent.")
-        return None, model_name
+    # Initialize client just as requested
+    client = OpenAI(
+        base_url=api_base_url,
+        api_key=api_key
+    )
+    
+    model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
+    return client, model_name
 
 
 def build_prompt(
@@ -114,105 +91,52 @@ def parse_response(text: str, default_action: str):
 
 
 def run_episode(env, task_name: str, client, model_name: str):
-    """Run a single episode from start to finish with required logging format.
-    
-    CRITICAL: Always attempts to use the provided client and make API calls.
-    Only falls back to heuristic if API calls actually fail.
-    This ensures the competition's LiteLLM proxy is always attempted first.
     """
-    try:
-        from baseline.agent import run_random_baseline
-    except ImportError:
-        print(f"CRITICAL: Failed to import baseline agent. Task {task_name} aborted.")
-        return {"total_reward": 0.0, "steps": 0, "trace": []}
-        
-    # Required [START] marker (Only once!)
+    Execute a full episode on a single environment.
+    """
     print(f"[START] task={task_name}", flush=True)
     
     res = {"total_reward": 0.0, "steps": 0, "trace": []}
     
-    try:
-        # CRITICAL: Do NOT check if client is None here!
-        # The validator provides credentials - we must ATTEMPT the API call.
-        # If client is None or API fails, the exception will be caught below.
+    obs = env.reset()
+    total_reward = 0.0
+    step = 0
+    history = []
+
+    while True:
+        step += 1
+        prompt = build_prompt(task_name, obs, step, history)
         
-        obs = env.reset()
-        total_reward = 0.0
-        step = 0
-        history = []
-
-        while True:
-            step += 1
-            prompt = build_prompt(task_name, obs, step, history)
-            
-            # Make API call with comprehensive error handling
-            try:
-                # If client is None, this will raise ValueError
-                # That's INTENTIONAL - it triggers the fallback path below
-                if client is None:
-                    raise ValueError("Client is None - competition may not have provided API_BASE_URL")
-                
-                # Log that we're about to make an API call
-                print(f"  [API] Calling LiteLLM proxy for task={task_name} step={step}")
-                
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.0,
-                    timeout=60.0  # Per-request timeout
-                )
-                
-                # Log successful API response
-                print(f"  [API] ✓ Response received from proxy")
-                
-                action = parse_response(response.choices[0].message.content, obs.available_actions[0])
-            except TimeoutError as e:
-                print(f"ERROR: API request timeout at step {step}: {e}")
-                raise  # Trigger fallback to heuristic
-            except ConnectionError as e:
-                print(f"ERROR: Connection failed at step {step}: {e}")
-                raise  # Trigger fallback to heuristic
-            except Exception as e:
-                # Handle rate limits, auth errors, proxy errors, etc.
-                error_str = str(e).lower()
-                if "rate limit" in error_str:
-                    print(f"ERROR: Rate limit exceeded at step {step}")
-                elif "authentication" in error_str or "401" in error_str:
-                    print(f"ERROR: Authentication failed - check API_KEY")
-                elif "proxy" in error_str or "connection" in error_str:
-                    print(f"ERROR: Proxy connection issue at step {step}")
-                else:
-                    print(f"ERROR: API call failed at step {step}: {e}")
-                raise  # Trigger fallback to heuristic
-            
-            result = env.step(action)
-            obs = result.observation
-            total_reward += result.reward.score
-            
-            # Required [STEP] marker with all details
-            print(f"[STEP] step={step} action={action.action_type} reward={result.reward.score:.4f} done={result.done}", flush=True)
-            
-            if result.done or step >= 10:
-                break
+        # Make API call securely via proxy
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0
+        )
+        action = parse_response(response.choices[0].message.content, obs.available_actions[0])
         
-        res = {"total_reward": total_reward, "steps": step, "trace": history}
+        # Execute action
+        result = env.step(action)
+        obs = result.observation
+        
+        # Log step format
+        print(f"[STEP] step={step} action={action.action_type} reward={result.reward.score:.4f} done={result.done}", flush=True)
 
-    except Exception as e:
-        print(f"CRITICAL: Falling back to heuristic for {task_name} due to: {e}")
-        try:
-            # Suppress internal markers to maintain single [START]/[END] pair
-            raw_res = run_random_baseline(env, task_name, verbose=False, suppress_markers=True)
-            res = {
-                "total_reward": raw_res.get("total_reward", 0.0),
-                "steps": raw_res.get("total_steps", raw_res.get("steps", 0)),
-                "trace": raw_res.get("trace", [])
-            }
-        except Exception as e2:
-            print(f"CRITICAL: Heuristic fallback failed for {task_name}: {e2}")
-            res = {"total_reward": 0.0, "steps": 0, "trace": []}
+        history.append({
+            "step": step,
+            "action": action.model_dump(),
+            "reward": result.reward.score,
+        })
+        
+        total_reward = result.reward.score
+        if result.done:
+            break
 
-    # Required [END] marker (Only once!)
-    print(f"[END] task={task_name} total_reward={res['total_reward']:.4f} steps={res['steps']}", flush=True)
+    res["total_reward"] = total_reward
+    res["steps"] = step
+    res["trace"] = history
+
+    print(f"[END] task={task_name} total_reward={total_reward:.4f} steps={step}", flush=True)
     return res
 
 
@@ -222,24 +146,8 @@ def main():
     print("OPENENV INFERENCE PIPELINE - Starting...")
     print("="*60 + "\n")
     
-    try:
-        # Safety check for Python environment
-        import importlib
-    except ImportError:
-        print("CRITICAL: Python environment is broken. Aborting gracefully.")
-        sys.exit(0)
-
-    # 1. Initialize OpenAI Client with full error reporting
-    client = None
-    model_name = "gpt-4o-mini"
-    try:
-        client, model_name = get_openai_client()
-        if client is None:
-            print("\nWARNING: No API client available. Will use heuristic fallback.\n")
-    except Exception as e:
-        print(f"ERROR: Client initialization failed: {e}")
-        print("Continuing with heuristic baseline agent.\n")
-        client = None
+    # 1. Initialize OpenAI Client
+    client, model_name = get_openai_client()
 
     # 2. Task Definitions
     task_configs = [
@@ -254,73 +162,50 @@ def main():
     results = {}
     
     for name, class_path in task_configs:
-        try:
-            # Import and instantiate environment
-            module_name, class_name = class_path.rsplit(".", 1)
-            module = importlib.import_module(module_name)
-            env_class = getattr(module, class_name)
+        # Import and instantiate environment
+        module_name, class_name = class_path.rsplit(".", 1)
+        module = importlib.import_module(module_name)
+        env_class = getattr(module, class_name)
+        
+        # Instantiate with specific configuration if needed
+        if name == "browser_nav":
+            env = env_class(headless=True)
+        else:
             env = env_class()
             
-            # Run episode (handles all errors internally)
-            res = run_episode(env, name, client, model_name)
-            results[name] = res
-            
-            # Normalize for JSON output
-            json_res = {
-                "task_name": name,
-                "total_steps": res.get("steps", res.get("total_steps", 0)),
-                "total_reward": res.get("total_reward", res.get("avg_reward", 0.0)),
-                "trace": res.get("trace", [])
-            }
-            all_trace_results.append(json_res)
-            
-        except ImportError as e:
-            print(f"ERROR: Could not import task '{name}': {e}")
-            print(f"Skipping task '{name}' with zero score.")
-            fallback_res = {"task_name": name, "total_steps": 0, "total_reward": 0.0, "trace": []}
-            results[name] = fallback_res
-            all_trace_results.append(fallback_res)
-            
-        except Exception as e:
-            print(f"ERROR: Unexpected failure in task '{name}': {e}")
-            print(f"Recording zero score for '{name}'.")
-            fallback_res = {"task_name": name, "total_steps": 0, "total_reward": 0.0, "trace": []}
-            results[name] = fallback_res
-            all_trace_results.append(fallback_res)
+        # Run episode (will crash if unhandled error)
+        res = run_episode(env, name, client, model_name)
+        
+        # Record result cleanly
+        results[name] = res
+        all_trace_results.append(res)
 
     # 4. Save results to JSON (required for validator)
-    try:
-        output_data = {
-            "config": {
-                "api_base_url": os.environ.get("API_BASE_URL", "NOT_SET"),
-                "model_name": model_name,
-                "has_api_key": client is not None
-            },
-            "results": all_trace_results
-        }
-        with open("inference_results.json", "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2)
-        print("\n[OK] Results saved to inference_results.json")
-    except Exception as e:
-        print(f"\nWARNING: Failed to save results JSON: {e}")
-        print("This may affect validator scoring, but inference completed.")
+    output_data = {
+        "config": {
+            "api_base_url": os.environ.get("API_BASE_URL", "NOT_SET"),
+            "model_name": model_name,
+            "has_api_key": client is not None
+        },
+        "results": all_trace_results
+    }
+    with open("inference_results.json", "w", encoding="utf-8") as f:
+        json.dump(output_data, f, indent=2)
+    print("\n[OK] Results saved to inference_results.json")
 
     # 5. Display final summary
-    try:
-        print("\n" + "="*60)
-        print("INFERENCE RESULTS SUMMARY")
-        print("="*60)
-        for name, res in results.items():
-            steps = res.get('steps', res.get('total_steps', 0))
-            reward = res.get('total_reward', res.get('avg_reward', 0.0))
-            print(f"  {name:20}: {reward:6.2f} points in {steps:2d} steps")
-        print("="*60)
-        
-        total_score = sum(r.get('total_reward', r.get('avg_reward', 0.0)) for r in results.values())
-        print(f"  {'TOTAL':20}: {total_score:6.2f} points")
-        print("="*60 + "\n")
-    except Exception as e:
-        print(f"\nWARNING: Could not display summary: {e}")
+    print("\n" + "="*60)
+    print("INFERENCE RESULTS SUMMARY")
+    print("="*60)
+    for name, res in results.items():
+        steps = res.get('steps', 0)
+        reward = res.get('total_reward', 0.0)
+        print(f"  {name:20}: {reward:6.2f} points in {steps:2d} steps")
+    print("="*60)
+    
+    total_score = sum(r.get('total_reward', 0.0) for r in results.values())
+    print(f"  {'TOTAL':20}: {total_score:6.2f} points")
+    print("="*60 + "\n")
 
     # 6. Always exit successfully (validator needs exit code 0)
     print("[SUCCESS] Inference pipeline completed successfully.")
@@ -329,21 +214,4 @@ def main():
 
 
 if __name__ == "__main__":
-    """Absolute final safety wrapper - catches ANY exception."""
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\nWARNING: Interrupted by user. Exiting gracefully.")
-        sys.exit(0)
-    except SystemExit:
-        # Normal exit from main() - don't catch this
-        pass
-    except Exception as e:
-        print(f"\n\nFATAL ERROR: Unhandled exception in main: {e}")
-        print("Exiting with success code to preserve any partial results.")
-        import traceback
-        traceback.print_exc()
-        sys.exit(0)
-    except:
-        print("\n\nCRITICAL: Unknown error occurred. Exiting gracefully.")
-        sys.exit(0)
+    main()
