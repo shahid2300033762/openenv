@@ -136,10 +136,16 @@ class TestPenaltiesAndBonuses:
         assert penalty > 0.0
 
     def test_clamp_score(self):
-        """Test score clamping to [0.0, 1.0]."""
-        assert clamp_score(-0.5) == 0.0
+        """Test score clamping to strict (0, 1) — never exactly 0.0 or 1.0."""
+        # Scores below 0 should clamp to EPS (0.001)
+        assert clamp_score(-0.5) == 0.001
+        # Scores in valid range should stay unchanged
         assert clamp_score(0.5) == 0.5
-        assert clamp_score(1.5) == 1.0
+        # Scores above 1 should clamp to 1.0 - EPS (0.999)
+        assert clamp_score(1.5) == 0.999
+        # Edge cases: exactly 0 and 1 should also be adjusted
+        assert clamp_score(0.0) == 0.001
+        assert clamp_score(1.0) == 0.999
 
 
 class TestReasoningEvaluation:

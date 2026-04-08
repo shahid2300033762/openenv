@@ -135,6 +135,17 @@ class Reward(BaseModel):
     penalties: RewardPenalties = Field(default_factory=RewardPenalties)
     early_bonus: float = Field(0.0, ge=0.0, le=0.1)
 
+    @field_validator("score")
+    @classmethod
+    def score_strict_bounds(cls, v: float) -> float:
+        """Competition validator requires scores strictly in (0, 1)."""
+        EPS = 0.001
+        if v <= 0.0:
+            return EPS
+        if v >= 1.0:
+            return 1.0 - EPS
+        return v
+
 
 class State(BaseModel):
     """Returned by state(). Full episode metadata."""

@@ -183,8 +183,18 @@ def evaluate_reasoning(reasoning: str) -> float:
 
 
 def clamp_score(score: float) -> float:
-    """Clamp to [0.0, 1.0]."""
-    return max(0.0, min(1.0, score))
+    """Clamp to strict (0, 1) — never exactly 0.0 or 1.0.
+    
+    The competition validator requires scores strictly between 0 and 1.
+    """
+    EPS = 0.001
+    clamped = max(0.0, min(1.0, score))
+    # Enforce strict bounds: push away from exact 0.0 and 1.0
+    if clamped <= 0.0:
+        return EPS
+    if clamped >= 1.0:
+        return 1.0 - EPS
+    return clamped
 
 
 def check_contradictions(current_value: str, previous_values: List[str]) -> bool:

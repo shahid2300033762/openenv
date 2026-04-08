@@ -78,12 +78,15 @@ class TestModels:
         assert reward.breakdown.correctness == 0.9
 
     def test_reward_score_clamping(self):
-        """Test that reward scores are clamped to [0.0, 1.0]."""
+        """Test that reward scores are clamped to strict (0, 1) — never exactly 0.0 or 1.0."""
         reward = Reward(score=0.0, feedback="Minimum")
-        assert reward.score == 0.0
+        assert reward.score == 0.001  # Clamped from 0.0 to EPS
         
         reward = Reward(score=1.0, feedback="Maximum")
-        assert reward.score == 1.0
+        assert reward.score == 0.999  # Clamped from 1.0 to 1.0 - EPS
+        
+        reward = Reward(score=0.5, feedback="Middle")
+        assert reward.score == 0.5  # Valid scores unchanged
 
     def test_state_creation(self):
         """Test State model creation."""
