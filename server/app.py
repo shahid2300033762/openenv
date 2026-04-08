@@ -110,6 +110,25 @@ async def state(session_id: str):
     return env.state().model_dump()
 
 
+def _clamp_scores(obj, eps=0.001):
+    """Recursively clamp all float values in a dict/list to strict (0, 1).
+    
+    This is the final safety net: no score field should ever be exactly 0.0 or 1.0
+    in the API response, per competition rules.
+    """
+    if isinstance(obj, dict):
+        return {k: _clamp_scores(v, eps) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_clamp_scores(item, eps) for item in obj]
+    elif isinstance(obj, float):
+        if obj <= 0.0:
+            return eps
+        if obj >= 1.0:
+            return 1.0 - eps
+        return obj
+    return obj
+
+
 @app.post("/step")
 async def step(req: StepRequest):
     """Execute an action in the environment."""
@@ -117,7 +136,10 @@ async def step(req: StepRequest):
     if not env:
         raise HTTPException(404, "Session not found")
     result = env.step(req.action)
-    return result.model_dump()
+    response = result.model_dump()
+    # Final safety: clamp all float values to strict (0, 1)
+    response = _clamp_scores(response)
+    return response
 
 
 @app.get("/health")

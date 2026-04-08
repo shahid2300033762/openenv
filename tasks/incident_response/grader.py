@@ -270,11 +270,11 @@ def grade_incident_response(
     gt_severity = ground_truth["severity"]
     
     # Individual phase scores
-    detection_score = grade_detection(detected_type, gt_type) if detected_type else 0.0
-    analysis_score = grade_indicators(indicators, gt_indicators) if indicators else 0.0
-    containment_score = grade_containment(containment, gt_actions) if containment else 0.0
-    remediation_score = grade_remediation(remediation, gt_actions, gt_type) if remediation else 0.0
-    documentation_score = grade_documentation(report, gt_type, gt_severity) if report else 0.0
+    detection_score = grade_detection(detected_type, gt_type) if detected_type else clamp_score(0.0)
+    analysis_score = grade_indicators(indicators, gt_indicators) if indicators else clamp_score(0.0)
+    containment_score = grade_containment(containment, gt_actions) if containment else clamp_score(0.0)
+    remediation_score = grade_remediation(remediation, gt_actions, gt_type) if remediation else clamp_score(0.0)
+    documentation_score = grade_documentation(report, gt_type, gt_severity) if report else clamp_score(0.0)
     
     # Weighted overall score
     overall = (
@@ -288,7 +288,7 @@ def grade_incident_response(
     # Time penalty for slow response
     if time_elapsed > ground_truth.get("time_to_contain_minutes", 999) * 2:
         time_penalty = 0.1
-        overall = max(0.0, overall - time_penalty)
+        overall = max(0.001, overall - time_penalty)  # Never let it reach 0.0
     
     return {
         "detection_score": clamp_score(detection_score),

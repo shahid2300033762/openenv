@@ -75,7 +75,7 @@ class BaseEnvironment(ABC):
         if self._done:
             return StepResult(
                 observation=self._last_observation or self._get_initial_observation(),
-                reward=Reward(score=0.0, feedback="Episode already completed."),
+                reward=Reward(score=clamp_score(0.0), feedback="Episode already completed."),
                 done=True,
                 info={"error": "episode_already_done"},
             )
@@ -111,6 +111,9 @@ class BaseEnvironment(ABC):
         step_pen = calculate_step_penalty(self._step_count, self.ideal_steps)
         reasoning_bonus = evaluate_reasoning(action.reasoning)
         early_bonus = calculate_early_bonus(task_done, self._step_count, self.ideal_steps)
+        # Ensure early_bonus is always > 0 for Reward field constraint
+        if early_bonus <= 0.0:
+            early_bonus = 0.001
 
         raw = task_reward.breakdown.correctness * 0.6 + task_reward.breakdown.progress * 0.4
         final = clamp_score(
@@ -194,7 +197,7 @@ class BaseEnvironment(ABC):
     def _make_invalid_action_result(self, message: str) -> StepResult:
         """Return a StepResult for an invalid / rejected action."""
         reward = Reward(
-            score=0.0,
+            score=clamp_score(0.0),
             feedback=f"❌ Action rejected: {message}",
             penalties=RewardPenalties(invalid_action_penalty=0.2),
         )

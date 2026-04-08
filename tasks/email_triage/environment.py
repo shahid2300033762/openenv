@@ -6,6 +6,7 @@ ideal_steps=3, max_steps=5
 """
 
 from __future__ import annotations
+from grading.utils import clamp_score
 
 from typing import Dict, List, Optional, Tuple
 
@@ -126,7 +127,7 @@ class EmailTriageEnvironment(BaseEnvironment):
             return (
                 self._last_observation or self._get_initial_observation(),
                 Reward(
-                    score=0.0,
+                    score=clamp_score(0.0),
                     feedback=f"Unknown action type: {action.action_type}",
                     penalties=RewardPenalties(invalid_action_penalty=0.2),
                 ),

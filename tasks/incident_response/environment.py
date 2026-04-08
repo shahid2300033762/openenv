@@ -12,6 +12,7 @@ This environment simulates real-world cybersecurity incident response with:
 """
 
 from __future__ import annotations
+from grading.utils import clamp_score
 
 from typing import Dict, List, Optional, Tuple
 
@@ -225,7 +226,7 @@ class IncidentResponseEnvironment(BaseEnvironment):
                     phase="remediate"
                 ),
                 Reward(
-                    score=correctness * (0.8 if self._attack_spreading else 1.0),
+                    score=clamp_score(correctness * (0.8 if self._attack_spreading else 1.0)),
                     feedback=feedback,
                     breakdown=RewardBreakdown(correctness=correctness, progress=0.6)
                 ),
@@ -331,6 +332,6 @@ class IncidentResponseEnvironment(BaseEnvironment):
         # Fallback
         return (
             self._last_observation or self._get_initial_observation(),
-            Reward(score=0.0, feedback="Invalid action"),
+            Reward(score=clamp_score(0.0), feedback="Invalid action"),
             False
         )
