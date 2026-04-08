@@ -112,9 +112,9 @@ class Action(BaseModel):
 class RewardBreakdown(BaseModel):
     """Itemised score components inside a Reward."""
 
-    correctness: float = Field(0.0, description="Clamped to (0, 1)")
-    reasoning_quality: float = Field(0.0, description="Clamped to (0, 1)")
-    progress: float = Field(0.0, description="Clamped to (0, 1)")
+    correctness: float = Field(0.001, description="Clamped to (0, 1)")
+    reasoning_quality: float = Field(0.001, description="Clamped to (0, 1)")
+    progress: float = Field(0.001, description="Clamped to (0, 1)")
 
     @field_validator("correctness", "reasoning_quality", "progress", mode="before")
     @classmethod
@@ -131,10 +131,10 @@ class RewardBreakdown(BaseModel):
 class RewardPenalties(BaseModel):
     """Itemised penalties inside a Reward."""
 
-    step_penalty: float = Field(0.0, description="Clamped to (0, 1)")
-    invalid_action_penalty: float = Field(0.0, description="Clamped to (0, 1)")
-    repetition_penalty: float = Field(0.0, description="Clamped to (0, 1)")
-    skip_penalty: float = Field(0.0, description="Clamped to (0, 1)")
+    step_penalty: float = Field(0.001, description="Clamped to (0, 1)")
+    invalid_action_penalty: float = Field(0.001, description="Clamped to (0, 1)")
+    repetition_penalty: float = Field(0.001, description="Clamped to (0, 1)")
+    skip_penalty: float = Field(0.001, description="Clamped to (0, 1)")
 
     @field_validator("step_penalty", "invalid_action_penalty", "repetition_penalty", "skip_penalty", mode="before")
     @classmethod
@@ -155,7 +155,7 @@ class Reward(BaseModel):
     feedback: str = Field("", description="Human-readable grader feedback")
     breakdown: RewardBreakdown = Field(default_factory=RewardBreakdown)
     penalties: RewardPenalties = Field(default_factory=RewardPenalties)
-    early_bonus: float = Field(0.0, ge=0.0, le=0.1)
+    early_bonus: float = Field(0.001, ge=0.001, le=0.1)
 
     @field_validator("score", mode="before")
     @classmethod
@@ -166,6 +166,14 @@ class Reward(BaseModel):
             return EPS
         if v >= 1.0:
             return 1.0 - EPS
+        return v
+    
+    @field_validator("early_bonus", mode="before")
+    @classmethod
+    def early_bonus_strict_bounds(cls, v: float) -> float:
+        """Ensure early_bonus is strictly > 0."""
+        if v <= 0.0:
+            return 0.001
         return v
 
 
