@@ -11,6 +11,7 @@ import copy
 import re
 from typing import Dict, List, Tuple
 
+from grading.utils import clamp_score
 from models import Action, Observation, Reward, RewardBreakdown, RewardPenalties  # type: ignore
 from tasks.base_environment import BaseEnvironment  # type: ignore
 from tasks.data_cleaning.data import (  # type: ignore
@@ -137,12 +138,16 @@ class DataCleaningEnvironment(BaseEnvironment):
             phase=self._current_phase,
         )
 
+        strict_score = clamp_score(grades["total"])
+        strict_correctness = clamp_score(overall["total"])
+        strict_progress = clamp_score(progress)
+
         reward = Reward(
-            score=grades["total"],
+            score=strict_score,
             feedback=feedback,
             breakdown=RewardBreakdown(
-                correctness=overall["total"],
-                progress=progress,
+                correctness=strict_correctness,
+                progress=strict_progress,
             ),
         )
 

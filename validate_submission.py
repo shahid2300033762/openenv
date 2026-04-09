@@ -6,7 +6,7 @@ Checks all requirements from the submission checklist:
 ✓ Dockerfile builds
 ✓ Baseline inference reproduces
 ✓ 3+ tasks with graders (we have 4!)
-✓ All scores in 0.0-1.0 range
+✓ All scores in strict (0, 1) range
 ✓ Environment variables defined
 ✓ Runtime < 20 minutes
 ✓ Works on 2 vCPU, 8GB RAM
@@ -65,7 +65,7 @@ def check_openenv_compliance() -> bool:
 
 
 def check_tasks_and_graders() -> bool:
-    """Check that we have 3+ tasks with graders producing 0.0-1.0 scores."""
+    """Check that we have 3+ tasks with graders producing strict (0, 1) scores."""
     print_header("2. Tasks & Graders (3+ required)")
     
     try:
@@ -104,9 +104,9 @@ def check_tasks_and_graders() -> bool:
                 result = env.step(action)
                 score = result.reward.score
                 
-                # Check score in 0.0-1.0 range
-                valid_score = 0.0 <= score <= 1.0
-                print_check(valid_score, f"{task_name}: grader score in [0.0, 1.0] (got {score:.3f})")
+                # Competition validator requires strict bounds
+                valid_score = 0.0 < score < 1.0
+                print_check(valid_score, f"{task_name}: grader score in (0.0, 1.0) (got {score:.3f})")
                 
                 all_valid = all_valid and valid_score
             except Exception as e:

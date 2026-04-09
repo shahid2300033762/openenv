@@ -137,9 +137,12 @@ class IncidentResponseEnvironment(BaseEnvironment):
                     phase="analyze"
                 ),
                 Reward(
-                    score=correctness,
+                    score=clamp_score(correctness),
                     feedback=feedback,
-                    breakdown=RewardBreakdown(correctness=correctness, progress=0.2)
+                    breakdown=RewardBreakdown(
+                        correctness=clamp_score(correctness),
+                        progress=clamp_score(0.2),
+                    )
                 ),
                 False
             )
@@ -177,9 +180,12 @@ class IncidentResponseEnvironment(BaseEnvironment):
                     phase="contain"
                 ),
                 Reward(
-                    score=correctness,
+                    score=clamp_score(correctness),
                     feedback=feedback,
-                    breakdown=RewardBreakdown(correctness=correctness, progress=0.4)
+                    breakdown=RewardBreakdown(
+                        correctness=clamp_score(correctness),
+                        progress=clamp_score(0.4),
+                    )
                 ),
                 False
             )
@@ -228,7 +234,10 @@ class IncidentResponseEnvironment(BaseEnvironment):
                 Reward(
                     score=clamp_score(correctness * (0.8 if self._attack_spreading else 1.0)),
                     feedback=feedback,
-                    breakdown=RewardBreakdown(correctness=correctness, progress=0.6)
+                    breakdown=RewardBreakdown(
+                        correctness=clamp_score(correctness),
+                        progress=clamp_score(0.6),
+                    )
                 ),
                 False
             )
@@ -266,9 +275,12 @@ class IncidentResponseEnvironment(BaseEnvironment):
                     phase="document"
                 ),
                 Reward(
-                    score=correctness,
+                    score=clamp_score(correctness),
                     feedback=feedback,
-                    breakdown=RewardBreakdown(correctness=correctness, progress=0.8)
+                    breakdown=RewardBreakdown(
+                        correctness=clamp_score(correctness),
+                        progress=clamp_score(0.8),
+                    )
                 ),
                 False
             )
@@ -322,9 +334,12 @@ class IncidentResponseEnvironment(BaseEnvironment):
                     phase="completed"
                 ),
                 Reward(
-                    score=correctness,
+                    score=clamp_score(correctness),
                     feedback=feedback,
-                    breakdown=RewardBreakdown(correctness=correctness, progress=1.0)
+                    breakdown=RewardBreakdown(
+                        correctness=clamp_score(correctness),
+                        progress=clamp_score(1.0),
+                    )
                 ),
                 True
             )

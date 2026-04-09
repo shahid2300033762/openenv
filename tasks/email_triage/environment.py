@@ -149,12 +149,15 @@ class EmailTriageEnvironment(BaseEnvironment):
             phase=self._current_phase,
         )
 
+        strict_correctness = clamp_score(correctness)
+        strict_progress = clamp_score(progress)
+
         reward = Reward(
-            score=correctness,
+            score=strict_correctness,
             feedback=feedback,
             breakdown=RewardBreakdown(
-                correctness=correctness,
-                progress=progress,
+                correctness=strict_correctness,
+                progress=strict_progress,
             ),
         )
 

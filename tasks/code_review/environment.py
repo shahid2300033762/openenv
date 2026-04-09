@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple
 
+from grading.utils import clamp_score
 from models import Action, Observation, Reward, RewardBreakdown, RewardPenalties
 from tasks.base_environment import BaseEnvironment
 from tasks.code_review.data import get_snippet_by_index
@@ -147,12 +148,15 @@ class CodeReviewEnvironment(BaseEnvironment):
             phase=self._current_phase,
         )
 
+        strict_score = clamp_score(grades["total"])
+        strict_progress = clamp_score(progress)
+
         reward = Reward(
-            score=grades["total"],
+            score=strict_score,
             feedback=feedback,
             breakdown=RewardBreakdown(
-                correctness=grades["total"],
-                progress=progress,
+                correctness=strict_score,
+                progress=strict_progress,
             ),
         )
 
