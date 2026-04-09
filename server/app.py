@@ -95,10 +95,10 @@ async def reset(request: Request):
     obs = env.reset()
     _sessions[session_id] = env
 
-    return {
+    return _clamp_scores({
         "session_id": session_id,
         "observation": obs.model_dump(),
-    }
+    })
 
 
 @app.get("/state/{session_id}")
@@ -107,17 +107,29 @@ async def state(session_id: str):
     env = _sessions.get(session_id)
     if not env:
         raise HTTPException(404, "Session not found")
-    return env.state().model_dump()
+    return _clamp_scores(env.state().model_dump())
 
 
 def _clamp_scores(obj, eps=0.001):
-    """Recursively clamp all float values in a dict/list to strict (0, 1).
+    """Recursively clamp numeric values, specially fetching ints mapped to 'score' metrics.
     
     This is the final safety net: no score field should ever be exactly 0.0 or 1.0
     in the API response, per competition rules.
     """
     if isinstance(obj, dict):
-        return {k: _clamp_scores(v, eps) for k, v in obj.items()}
+        new_dict = {}
+        for k, v in obj.items():
+            if isinstance(v, (int, float)) and isinstance(k, str) and ("score" in k.lower() or "reward" in k.lower()):
+                v_float = float(v)
+                if v_float <= 0.0:
+                    new_dict[k] = eps
+                elif v_float >= 1.0:
+                    new_dict[k] = 1.0 - eps
+                else:
+                    new_dict[k] = v_float
+            else:
+                new_dict[k] = _clamp_scores(v, eps)
+        return new_dict
     elif isinstance(obj, list):
         return [_clamp_scores(item, eps) for item in obj]
     elif isinstance(obj, float):
