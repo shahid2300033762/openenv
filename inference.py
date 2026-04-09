@@ -33,12 +33,12 @@ def get_openai_client():
 
     # Read environment variables — these are INJECTED by the validator
     api_base_url = os.environ.get("API_BASE_URL", "").strip()
-    api_key = os.environ.get("API_KEY", "").strip()
+    hf_token = os.environ.get("HF_TOKEN", "").strip()
     model_name = os.environ.get("MODEL_NAME", "").strip()
 
     # Log what we have (without leaking full key)
     print(f"[ENV] API_BASE_URL = '{api_base_url}'", flush=True)
-    print(f"[ENV] API_KEY present = {bool(api_key)}, length = {len(api_key)}", flush=True)
+    print(f"[ENV] HF_TOKEN present = {bool(hf_token)}, length = {len(hf_token)}", flush=True)
     print(f"[ENV] MODEL_NAME = '{model_name}'", flush=True)
 
     # Validate — both MUST be set by the competition environment
@@ -46,9 +46,8 @@ def get_openai_client():
         print("[WARN] API_BASE_URL not set! Using fallback for local testing only.", flush=True)
         api_base_url = "http://localhost:8000/v1"
 
-    if not api_key:
-        print("[WARN] API_KEY not set! Using fallback for local testing only.", flush=True)
-        api_key = "sk-local-test"
+    if not hf_token:
+        print("[WARN] HF_TOKEN not set! LiteLLM proxy auth may fail.", flush=True)
 
     if not model_name:
         model_name = "gpt-4o-mini"
@@ -67,7 +66,7 @@ def get_openai_client():
         import httpx
         client = OpenAI(
             base_url=api_base_url,
-            api_key=api_key,
+            api_key=hf_token,
             http_client=httpx.Client(verify=False),
             timeout=120.0,
         )
@@ -76,7 +75,7 @@ def get_openai_client():
         try:
             client = OpenAI(
                 base_url=api_base_url,
-                api_key=api_key,
+                api_key=hf_token,
                 timeout=120.0,
             )
         except Exception as e2:
