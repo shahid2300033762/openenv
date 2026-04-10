@@ -112,8 +112,8 @@ class DataCleaningEnvironment(BaseEnvironment):
         if original_errors["total"] > 0:
             progress = 1.0 - (errors_after["total"] / original_errors["total"])
         else:
-            progress = 1.0
-        progress = max(0.0, min(1.0, progress))
+            progress = 0.999
+        progress = clamp_score(progress)
 
         feedback = (
             f"Applied '{action.action_type}'. Remaining errors: "

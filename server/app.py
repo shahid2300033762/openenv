@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel as PydanticBaseModel, Field
 
+from grading.utils import clamp_score_tree
 from models import Action, Observation, Reward, State, StepResult
 from tasks.email_triage.environment import EmailTriageEnvironment
 from tasks.data_cleaning.environment import DataCleaningEnvironment
@@ -111,34 +112,8 @@ async def state(session_id: str):
 
 
 def _clamp_scores(obj, eps=0.001):
-    """Recursively clamp numeric values, specially fetching ints mapped to 'score' metrics.
-    
-    This is the final safety net: no score field should ever be exactly 0.0 or 1.0
-    in the API response, per competition rules.
-    """
-    if isinstance(obj, dict):
-        new_dict = {}
-        for k, v in obj.items():
-            if isinstance(v, (int, float)) and isinstance(k, str) and ("score" in k.lower() or "reward" in k.lower()):
-                v_float = float(v)
-                if v_float <= 0.0:
-                    new_dict[k] = eps
-                elif v_float >= 1.0:
-                    new_dict[k] = 1.0 - eps
-                else:
-                    new_dict[k] = v_float
-            else:
-                new_dict[k] = _clamp_scores(v, eps)
-        return new_dict
-    elif isinstance(obj, list):
-        return [_clamp_scores(item, eps) for item in obj]
-    elif isinstance(obj, float):
-        if obj <= 0.0:
-            return eps
-        if obj >= 1.0:
-            return 1.0 - eps
-        return obj
-    return obj
+    """Final API safety net for score serialization."""
+    return clamp_score_tree(obj, eps)
 
 
 @app.post("/step")

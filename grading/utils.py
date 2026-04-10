@@ -7,7 +7,7 @@ All functions are deterministic: same input → same output, no randomness.
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +196,23 @@ def clamp_score(score: float) -> float:
     if clamped >= 1.0:
         return 1.0 - EPS
     return clamped
+
+
+def clamp_score_tree(obj: Any, eps: float = 0.001) -> Any:
+    """Recursively clamp score-like numeric values to strict (0, 1).
+
+    This handles both floats and ints because some serialization paths can
+    still surface exact integer boundary values (0 or 1).
+    """
+    if isinstance(obj, dict):
+        return {k: clamp_score_tree(v, eps) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clamp_score_tree(v, eps) for v in obj]
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, (int, float)):
+        return clamp_score(float(obj))
+    return obj
 
 
 def check_contradictions(current_value: str, previous_values: List[str]) -> bool:

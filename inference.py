@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import models
 from models import Action
+from grading.utils import clamp_score_tree
 
 
 def get_openai_client():
@@ -317,17 +318,7 @@ def main():
         }
         
         # FINAL SAFETY NET: Recursively sweep JSON for absolute 0.0 or 1.0 values!
-        def _sweep_and_clamp(obj):
-            if isinstance(obj, dict):
-                return {k: _sweep_and_clamp(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [_sweep_and_clamp(v) for v in obj]
-            if isinstance(obj, float):
-                if obj <= 0.0: return 0.001
-                if obj >= 1.0: return 0.999
-            return obj
-            
-        output_data = _sweep_and_clamp(output_data)
+        output_data = clamp_score_tree(output_data)
 
         try:
             with open("inference_results.json", "w", encoding="utf-8") as f:

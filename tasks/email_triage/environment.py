@@ -120,7 +120,7 @@ class EmailTriageEnvironment(BaseEnvironment):
             )
             next_actions = []
             correctness = grades["total"]
-            progress = 1.0
+            progress = 0.999
 
         else:
             # Shouldn't reach here (base validates), but safety net

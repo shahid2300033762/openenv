@@ -52,12 +52,29 @@ def test_step_result_dump_has_no_boundary_scores():
 
 def test_server_clamp_scores_sanitizes_boundary_values():
     payload = {
-        "score": 0.0,
-        "reward": {"score": 1.0},
+        "score": 0,
+        "reward": {"score": 1},
         "results": [{"total_reward": 0.0}, {"nested_score": 1.0}],
     }
 
     assert not _find_bad_floats(_clamp_scores(payload))
+
+
+def test_reward_dump_sanitizes_integer_boundaries():
+    reward = Reward(
+        score=1,
+        feedback="test",
+        breakdown=RewardBreakdown(correctness=0, reasoning_quality=1, progress=0),
+        penalties=RewardPenalties(
+            step_penalty=0,
+            invalid_action_penalty=1,
+            repetition_penalty=0,
+            skip_penalty=0,
+        ),
+        early_bonus=0.001,
+    )
+
+    assert not _find_bad_floats(reward.model_dump())
 
 
 def test_inference_results_fixture_has_no_boundary_scores():

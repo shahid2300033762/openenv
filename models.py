@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from grading.utils import clamp_score, clamp_score_tree
+
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -120,24 +122,12 @@ class RewardBreakdown(BaseModel):
     @classmethod
     def strict_bounds(cls, v: float) -> float:
         """Ensure all scores are strictly in (0, 1)."""
-        EPS = 0.001
-        if v <= 0.0:
-            return EPS
-        if v >= 1.0:
-            return 1.0 - EPS
-        return v
+        return clamp_score(float(v))
 
     def model_dump(self, **kwargs) -> Dict[str, Any]:
         """Clamp all float values on serialisation."""
         raw = super().model_dump(**kwargs)
-        EPS = 0.001
-        for key, val in raw.items():
-            if isinstance(val, float):
-                if val <= 0.0:
-                    raw[key] = EPS
-                elif val >= 1.0:
-                    raw[key] = 1.0 - EPS
-        return raw
+        return clamp_score_tree(raw)
 
 
 class RewardPenalties(BaseModel):
@@ -152,24 +142,12 @@ class RewardPenalties(BaseModel):
     @classmethod
     def strict_bounds(cls, v: float) -> float:
         """Ensure all penalty values are strictly in (0, 1)."""
-        EPS = 0.001
-        if v <= 0.0:
-            return EPS
-        if v >= 1.0:
-            return 1.0 - EPS
-        return v
+        return clamp_score(float(v))
 
     def model_dump(self, **kwargs) -> Dict[str, Any]:
         """Clamp all float values on serialisation."""
         raw = super().model_dump(**kwargs)
-        EPS = 0.001
-        for key, val in raw.items():
-            if isinstance(val, float):
-                if val <= 0.0:
-                    raw[key] = EPS
-                elif val >= 1.0:
-                    raw[key] = 1.0 - EPS
-        return raw
+        return clamp_score_tree(raw)
 
 
 class Reward(BaseModel):
@@ -185,12 +163,7 @@ class Reward(BaseModel):
     @classmethod
     def score_strict_bounds(cls, v: float) -> float:
         """Competition validator requires scores strictly in (0, 1)."""
-        EPS = 0.001
-        if v <= 0.0:
-            return EPS
-        if v >= 1.0:
-            return 1.0 - EPS
-        return v
+        return clamp_score(float(v))
     
     @field_validator("early_bonus", mode="before")
     @classmethod
@@ -205,22 +178,7 @@ class Reward(BaseModel):
     def model_dump(self, **kwargs) -> Dict[str, Any]:
         """Override to clamp ALL floats to strict (0, 1) on serialisation."""
         raw = super().model_dump(**kwargs)
-        # Inline clamp for Reward fields
-        EPS = 0.001
-        for key, val in raw.items():
-            if isinstance(val, float):
-                if val <= 0.0:
-                    raw[key] = EPS
-                elif val >= 1.0:
-                    raw[key] = 1.0 - EPS
-            elif isinstance(val, dict):
-                for k2, v2 in val.items():
-                    if isinstance(v2, float):
-                        if v2 <= 0.0:
-                            val[k2] = EPS
-                        elif v2 >= 1.0:
-                            val[k2] = 1.0 - EPS
-        return raw
+        return clamp_score_tree(raw)
 
 
 class State(BaseModel):
@@ -242,24 +200,14 @@ class State(BaseModel):
 # ---------------------------------------------------------------------------
 
 def _clamp_all_floats(obj: Any, eps: float = 0.001) -> Any:
-    """Recursively clamp every float in a nested dict/list to strict (0, 1).
+    """Recursively clamp every numeric score in a nested dict/list to strict (0, 1).
     
     This is the FINAL safety net.  The competition validator requires
     every task score to be strictly between 0 and 1 (not 0.0 and not 1.0).
     By clamping at the serialisation layer, we guarantee compliance no
     matter what upstream arithmetic produces.
     """
-    if isinstance(obj, dict):
-        return {k: _clamp_all_floats(v, eps) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_clamp_all_floats(v, eps) for v in obj]
-    if isinstance(obj, float):
-        if obj <= 0.0:
-            return eps
-        if obj >= 1.0:
-            return 1.0 - eps
-        return obj
-    return obj
+    return clamp_score_tree(obj, eps)
 
 
 class StepResult(BaseModel):
@@ -274,4 +222,3 @@ class StepResult(BaseModel):
         """Override to clamp ALL floats in serialised output to strict (0, 1)."""
         raw = super().model_dump(**kwargs)
         return _clamp_all_floats(raw)
-
