@@ -46,9 +46,10 @@ class TestFuzzyMatching:
     """Test fuzzy matching functions."""
 
     def test_fuzzy_keyword_match_exact(self):
-        """Test exact match returns 1.0."""
+        """Test exact match is clamped just below 1.0."""
         score = fuzzy_keyword_match("hello world", ["hello world"])
-        assert score == 1.0
+        assert 0.0 < score < 1.0
+        assert score == 0.999
 
     def test_fuzzy_keyword_match_partial(self):
         """Test partial match returns value between 0 and 1."""
@@ -70,9 +71,10 @@ class TestFuzzyMatching:
         assert score > 0.5
 
     def test_semantic_similarity_identical(self):
-        """Test identical text returns high similarity."""
+        """Test identical text returns high similarity but never 1.0."""
         score = semantic_similarity("hello world", "hello world")
-        assert score == 1.0
+        assert 0.0 < score < 1.0
+        assert score == 0.999
 
     def test_semantic_similarity_similar(self):
         """Test similar text returns moderate similarity."""

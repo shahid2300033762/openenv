@@ -255,9 +255,9 @@ def check_minimum_tasks():
 
 
 def check_score_range():
-    """Check that all scores are in [0.0, 1.0] range."""
+    """Check that all scores are strictly in (0.0, 1.0)."""
     print("\n" + "="*80)
-    print("CRITICAL CHECK: Score Range [0.0, 1.0]")
+    print("CRITICAL CHECK: Score Range (0.0, 1.0)")
     print("="*80)
     
     from main import create_environment
@@ -280,8 +280,8 @@ def check_score_range():
             result = env.step(action)
             score = result.reward.score
             
-            if not (0.0 <= score <= 1.0):
-                print(f"  ❌ {task_name}: Score {score} outside [0.0, 1.0]!")
+            if not (0.0 < score < 1.0):
+                print(f"  ❌ {task_name}: Score {score} outside (0.0, 1.0)!")
                 all_valid = False
             
             obs = result.observation
@@ -289,7 +289,7 @@ def check_score_range():
                 break
     
     if all_valid:
-        print("  ✓ All scores in valid range [0.0, 1.0]")
+        print("  ✓ All scores in valid range (0.0, 1.0)")
         print("\n  ✓ SCORE RANGE VALID - WILL NOT BE DISQUALIFIED")
     else:
         print("\n  ❌ INVALID SCORES - MAY BE DISQUALIFIED")
@@ -311,7 +311,7 @@ def main():
         ("HF Space Deployment", check_hf_space_readiness),
         ("OpenEnv Compliance", check_openenv_compliance),
         ("Minimum 3 Tasks", check_minimum_tasks),
-        ("Score Range [0.0, 1.0]", check_score_range),
+        ("Score Range (0.0, 1.0)", check_score_range),
     ]
     
     results = []

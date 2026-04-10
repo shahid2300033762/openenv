@@ -27,7 +27,7 @@ def token_set(text: str) -> Set[str]:
 def fuzzy_keyword_match(candidate: str, references: List[str]) -> float:
     """
     Token-overlap similarity between candidate and the best-matching reference.
-    Returns EPS – 1.0.  Deterministic.
+    Returns a score strictly inside (0, 1). Deterministic.
     """
     EPS = 0.001
     if not references:
@@ -44,7 +44,7 @@ def fuzzy_keyword_match(candidate: str, references: List[str]) -> float:
         union = len(cand_tokens | ref_tokens)
         score = overlap / union if union else EPS
         best = max(best, score)
-    return best
+    return clamp_score(best)
 
 
 def semantic_similarity(text_a: str, text_b: str) -> float:
@@ -63,7 +63,7 @@ def semantic_similarity(text_a: str, text_b: str) -> float:
     b_bg = bigrams(text_b) | token_set(text_b)
     if not a_bg or not b_bg:
         return 0.001
-    return len(a_bg & b_bg) / len(a_bg | b_bg)
+    return clamp_score(len(a_bg & b_bg) / len(a_bg | b_bg))
 
 
 def keyword_group_match(text: str, keyword_groups: Dict[str, List[str]]) -> str:
